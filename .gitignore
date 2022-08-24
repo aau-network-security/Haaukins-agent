@@ -1,0 +1,8 @@
+config.yml
+.testqueries.sql
+.air.toml
+build-errors.log
+main
+logs
+.VSCodeCounter
+casbin.md

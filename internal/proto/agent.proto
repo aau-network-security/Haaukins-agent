@@ -1,0 +1,17 @@
+syntax = "proto3";
+package agent;
+option go_package = "github.com/aau-network-security/haaukins-agent/proto";
+
+service Agent {
+    rpc TestCall(TestCallRequest) returns (TestCallResponse) {}
+}
+
+message Empty{}
+
+message TestCallRequest {
+    string message = 1;
+}
+
+message TestCallResponse {
+    string message = 1;
+}
