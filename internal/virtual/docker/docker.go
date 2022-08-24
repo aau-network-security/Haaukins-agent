@@ -193,7 +193,7 @@ func GetRedisContainer(mountPath string) (Container, error) {
 	redisContainer, err := DefaultClient.ListContainers(docker.ListContainersOptions{
 		All: true,
 		Filters: map[string][]string{
-			"name": []string{"redis_cache"},
+			"name": {"redis_cache"},
 		},
 	})
 	if err != nil {
