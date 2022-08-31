@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/aau-network-security/haaukins-agent/internal/cache"
-	pb "github.com/aau-network-security/haaukins-agent/internal/proto"
 	"github.com/aau-network-security/haaukins-agent/internal/virtual/docker"
+	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/aau-network-security/haaukins/virtual"
 	"github.com/rs/zerolog/log"

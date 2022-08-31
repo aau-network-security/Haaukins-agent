@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/aau-network-security/haaukins-agent/internal/agent"
-	pb "github.com/aau-network-security/haaukins-agent/internal/proto"
+	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
