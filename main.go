@@ -6,7 +6,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/aau-network-security/haaukins-agent/internal/daemon"
+	"github.com/aau-network-security/haaukins-agent/internal/agent"
 	pb "github.com/aau-network-security/haaukins-agent/internal/proto"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -24,13 +24,13 @@ func main() {
 	confFilePtr := flag.String("config", defaultConfigFile, "configuration file")
 	flag.Parse()
 
-	c, err := daemon.NewConfigFromFile(*confFilePtr)
+	c, err := agent.NewConfigFromFile(*confFilePtr)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("unable to read configuration file: %s", *confFilePtr)
 		return
 	}
 
-	d, err := daemon.New(c)
+	d, err := agent.New(c)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create daemon")
 		return
