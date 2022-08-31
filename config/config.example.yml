@@ -1,0 +1,18 @@
+host: localhost
+port: 8081
+auth-key: test-auth-key
+sign-key: test-sign-key
+
+guac-ssl: false
+
+redis-data-path: /path/to/desired/redis/data
+file-transfer-root: /path/to/desired/filetransfer/root
+ova-dir: /path/to/desired/ova/directory
+
+vpn-service:
+  endpoint: vpn.localhost
+  port: 5353
+  auth-key: dev-auth-key
+  sign-key: dev-sign-key
+  wg-conf-dir: /etc/wireguard
+  tls-enabled: false

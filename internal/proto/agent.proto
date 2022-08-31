@@ -1,0 +1,21 @@
+syntax = "proto3";
+package agent;
+option go_package = "github.com/aau-network-security/haaukins-agent/proto";
+
+service Agent {
+    rpc CreateLabs(CreateLabsRequest) returns (CreateLabsResponse) {}
+    rpc LabStream(Empty) returns (stream Lab)
+}
+
+message Empty{}
+
+message CreateLabsRequest {
+    string message = 1;
+}
+
+message CreateLabsResponse {
+    string eventTag = 1;
+    string vm = 2;
+    repeated string exercises = 3;
+    string error = 4;
+}
