@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aau-network-security/haaukins-agent/internal/proto"
+	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 )
 
 func (d *Agent) CreateLabs(ctx context.Context, req *proto.TestCallRequest) (*proto.TestCallResponse, error) {
