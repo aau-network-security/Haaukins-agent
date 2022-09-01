@@ -4,18 +4,43 @@ option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 
 service Agent {
     rpc CreateLabs(CreateLabsRequest) returns (CreateLabsResponse) {}
-    rpc LabStream(Empty) returns (stream Lab)
+    rpc LabStream(Empty) returns (stream Lab) {}
 }
 
 message Empty{}
 
 message CreateLabsRequest {
-    string message = 1;
+    string eventTag = 1;
+    Vms vms = 2;
+    int32 amount = 3;
+    repeated string exercises = 4;
+    string error = 5;
+}
+
+message Vms {
+    repeated VmConfig vmConfigs = 1;
+}
+
+message VmConfig {
+    string image = 1;
+    uint32 memoryMB = 2;
+    double cpu = 3;
 }
 
 message CreateLabsResponse {
-    string eventTag = 1;
-    string vm = 2;
-    repeated string exercises = 3;
-    string error = 4;
+    string message = 1;
+}
+
+message Lab {
+    string tag = 1;
+    string eventTag = 2;
+    repeated Exercise exercises = 3;
+    uint32 guacPort = 4;
+    bool isVPN = 5;
+}
+
+message Exercise {
+    string tag = 1;
+    repeated string flags = 2;
+    repeated string errors = 3;
 }

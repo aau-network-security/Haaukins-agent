@@ -22,7 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentClient interface {
-	TestCall(ctx context.Context, in *TestCallRequest, opts ...grpc.CallOption) (*TestCallResponse, error)
+	CreateLabs(ctx context.Context, in *CreateLabsRequest, opts ...grpc.CallOption) (*CreateLabsResponse, error)
+	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
 }
 
 type agentClient struct {
@@ -33,20 +34,53 @@ func NewAgentClient(cc grpc.ClientConnInterface) AgentClient {
 	return &agentClient{cc}
 }
 
-func (c *agentClient) TestCall(ctx context.Context, in *TestCallRequest, opts ...grpc.CallOption) (*TestCallResponse, error) {
-	out := new(TestCallResponse)
-	err := c.cc.Invoke(ctx, "/agent.Agent/TestCall", in, out, opts...)
+func (c *agentClient) CreateLabs(ctx context.Context, in *CreateLabsRequest, opts ...grpc.CallOption) (*CreateLabsResponse, error) {
+	out := new(CreateLabsResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/CreateLabs", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
+func (c *agentClient) LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Agent_ServiceDesc.Streams[0], "/agent.Agent/LabStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &agentLabStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Agent_LabStreamClient interface {
+	Recv() (*Lab, error)
+	grpc.ClientStream
+}
+
+type agentLabStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *agentLabStreamClient) Recv() (*Lab, error) {
+	m := new(Lab)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // AgentServer is the server API for Agent service.
 // All implementations must embed UnimplementedAgentServer
 // for forward compatibility
 type AgentServer interface {
-	TestCall(context.Context, *TestCallRequest) (*TestCallResponse, error)
+	CreateLabs(context.Context, *CreateLabsRequest) (*CreateLabsResponse, error)
+	LabStream(*Empty, Agent_LabStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
 
@@ -54,8 +88,11 @@ type AgentServer interface {
 type UnimplementedAgentServer struct {
 }
 
-func (UnimplementedAgentServer) TestCall(context.Context, *TestCallRequest) (*TestCallResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TestCall not implemented")
+func (UnimplementedAgentServer) CreateLabs(context.Context, *CreateLabsRequest) (*CreateLabsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateLabs not implemented")
+}
+func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
 }
 func (UnimplementedAgentServer) mustEmbedUnimplementedAgentServer() {}
 
@@ -70,22 +107,43 @@ func RegisterAgentServer(s grpc.ServiceRegistrar, srv AgentServer) {
 	s.RegisterService(&Agent_ServiceDesc, srv)
 }
 
-func _Agent_TestCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TestCallRequest)
+func _Agent_CreateLabs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateLabsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentServer).TestCall(ctx, in)
+		return srv.(AgentServer).CreateLabs(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/agent.Agent/TestCall",
+		FullMethod: "/agent.Agent/CreateLabs",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServer).TestCall(ctx, req.(*TestCallRequest))
+		return srv.(AgentServer).CreateLabs(ctx, req.(*CreateLabsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_LabStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(AgentServer).LabStream(m, &agentLabStreamServer{stream})
+}
+
+type Agent_LabStreamServer interface {
+	Send(*Lab) error
+	grpc.ServerStream
+}
+
+type agentLabStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *agentLabStreamServer) Send(m *Lab) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // Agent_ServiceDesc is the grpc.ServiceDesc for Agent service.
@@ -96,10 +154,16 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AgentServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "TestCall",
-			Handler:    _Agent_TestCall_Handler,
+			MethodName: "CreateLabs",
+			Handler:    _Agent_CreateLabs_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "LabStream",
+			Handler:       _Agent_LabStream_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "agent.proto",
 }

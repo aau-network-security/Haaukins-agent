@@ -24,7 +24,7 @@ import (
 
 	"io"
 
-	"github.com/aau-network-security/haaukins/virtual"
+	"github.com/aau-network-security/haaukins-agent/internal/virtual"
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"

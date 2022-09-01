@@ -12,10 +12,12 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/aau-network-security/haaukins-agent/internal/cache"
+	"github.com/aau-network-security/haaukins-agent/internal/lab"
+	"github.com/aau-network-security/haaukins-agent/internal/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/virtual/vbox"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
-	"github.com/aau-network-security/haaukins/virtual"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
@@ -24,13 +26,15 @@ type Agent struct {
 	redis cache.RedisCache
 	State *State
 	auth  Authenticator
+	vlib  vbox.Library
 	pb.UnimplementedAgentServer
+	newLabs chan pb.Lab
 }
 
 type State struct {
-	m         sync.RWMutex
-	Eventpool *eventPool `json:"eventpool,omitempty"`
-	exClient  eproto.ExerciseStoreClient
+	m        sync.RWMutex
+	EnvPool  *lab.EnvPool `json:"envpool,omitempty"`
+	exClient eproto.ExerciseStoreClient
 }
 
 const DEFAULT_SIGN = "dev-sign-key"
@@ -152,7 +156,9 @@ func New(conf *Config) (*Agent, error) {
 			Host: "127.0.0.1:6379",
 			DB:   0,
 		},
-		auth: NewAuthenticator(conf.SignKey, conf.AuthKey),
+		vlib:    vbox.NewLibrary(conf.OvaDir),
+		auth:    NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs: make(chan pb.Lab, 10),
 	}
 	return d, nil
 }
