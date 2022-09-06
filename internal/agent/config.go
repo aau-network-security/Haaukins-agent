@@ -12,6 +12,7 @@ type Config struct {
 	RedisDataPath      string                           `yaml:"redis-data-path"`
 	FileTransferRoot   string                           `yaml:"file-transfer-root"`
 	OvaDir             string                           `yaml:"ova-dir"`
+	ExerciseService    ServiceConfig                    `yaml:"exercise-service"`
 	VPNService         VPNconf                          `yaml:"vpn-service"`
 	DockerRepositories []dockerclient.AuthConfiguration `yaml:"docker-repositories"`
 	GuacSSL            bool                             `yaml:"guac-ssl"`
@@ -23,5 +24,12 @@ type VPNconf struct {
 	AuthKey    string `yaml:"auth-key"`
 	SignKey    string `yaml:"sign-key"`
 	WgConfDir  string `yaml:"wg-conf-dir"`
+	TLSEnabled bool   `yaml:"tls-enabled"`
+}
+
+type ServiceConfig struct {
+	Grpc       string `yaml:"grpc"`
+	AuthKey    string `yaml:"auth-key"`
+	SignKey    string `yaml:"sign-key"`
 	TLSEnabled bool   `yaml:"tls-enabled"`
 }

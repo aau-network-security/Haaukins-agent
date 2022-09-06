@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,35 +13,42 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/aau-network-security/haaukins-agent/internal/cache"
-	"github.com/aau-network-security/haaukins-agent/internal/lab"
-	"github.com/aau-network-security/haaukins-agent/internal/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/virtual/vbox"
+	env "github.com/aau-network-security/haaukins-agent/internal/environment"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
 
+var configPath string
+
 type Agent struct {
-	redis cache.RedisCache
-	State *State
-	auth  Authenticator
-	vlib  vbox.Library
+	initialized bool
+	config      *Config
+	redis       cache.RedisCache
+	State       *State
+	auth        Authenticator
+	vlib        vbox.Library
 	pb.UnimplementedAgentServer
 	newLabs chan pb.Lab
 }
 
 type State struct {
 	m        sync.RWMutex
-	EnvPool  *lab.EnvPool `json:"envpool,omitempty"`
-	exClient eproto.ExerciseStoreClient
+	EnvPool  *env.EnvPool `json:"envpool,omitempty"`
+	ExClient eproto.ExerciseStoreClient
 }
 
 const DEFAULT_SIGN = "dev-sign-key"
 const DEFAULT_AUTH = "dev-auth-key"
 
+// TODO check vpn service conf
 func NewConfigFromFile(path string) (*Config, error) {
+	configPath = path
 	f, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -149,9 +157,23 @@ func New(conf *Config) (*Agent, error) {
 		// Waiting for container to start
 		time.Sleep(5)
 	}
-
+	var initialized = true
+	var exClient eproto.ExerciseStoreClient
+	// Check if exercise service has been configured by daemon
+	if conf.ExerciseService.Grpc == "" {
+		log.Debug().Msg("exercise service not yet configured, waiting for daemon to initiliaze...")
+		initialized = false
+		exClient = nil
+	} else {
+		exClient, err = NewExerciseClientConn(conf.ExerciseService)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
+		}
+	}
 	//log.Debug().Int("State", int(redisContainer.Info().State))
 	d := &Agent{
+		initialized: initialized,
+		config:      conf,
 		redis: cache.RedisCache{
 			Host: "127.0.0.1:6379",
 			DB:   0,
@@ -159,6 +181,10 @@ func New(conf *Config) (*Agent, error) {
 		vlib:    vbox.NewLibrary(conf.OvaDir),
 		auth:    NewAuthenticator(conf.SignKey, conf.AuthKey),
 		newLabs: make(chan pb.Lab, 10),
+		State: &State{
+			ExClient: exClient,
+			EnvPool:  &env.EnvPool{},
+		},
 	}
 	return d, nil
 }
@@ -184,4 +210,47 @@ func (d *Agent) NewGRPCServer(opts ...grpc.ServerOption) *grpc.Server {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	}, opts...)
 	return grpc.NewServer(opts...)
+}
+
+// Connect to exdb based on what creds sent by daemon, and write to config
+func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.StatusResponse, error) {
+	var exConf = ServiceConfig{
+		Grpc:       req.Url,
+		AuthKey:    req.AuthKey,
+		SignKey:    req.SignKey,
+		TLSEnabled: req.TlsEnabled,
+	}
+	log.Debug().Msgf("request: %v", req)
+	exClient, err := NewExerciseClientConn(exConf)
+	if err != nil {
+		log.Error().Err(err).Msg("error connecting to exercise service")
+		return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
+	}
+	
+	a.config.ExerciseService = exConf
+
+	data, err := yaml.Marshal(a.config)
+	if err != nil {
+		log.Error().Err(err).Msg("error marshalling yaml")
+		return nil, errors.New(fmt.Sprintf("error marshalling yaml: %s", err))
+	}
+
+	f, err := os.Create(configPath)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating or truncating config file")
+		return nil, errors.New(fmt.Sprintf("error creating or truncating config file: %s", err))
+	}
+
+	if err := f.Chmod(0600); err != nil {
+		log.Error().Err(err).Msg("error changing file perms")
+		return nil, errors.New(fmt.Sprintf("error changing file perms: %s", err))
+	}
+
+	if _, err := f.Write(data); err != nil {
+		log.Error().Err(err).Msg("error writing config to file")
+		return nil, errors.New(fmt.Sprintf("error writing config to file: %s", err))
+	}
+	a.initialized = true
+	a.State.ExClient = exClient
+	return &proto.StatusResponse{Message: "OK"}, nil
 }
