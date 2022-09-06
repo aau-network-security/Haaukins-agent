@@ -13,7 +13,6 @@ type EnvPool struct {
 }
 
 type Environment struct {
-	Tag    string
 	Config EnvConfig
 	Labs   []lab.Lab
 	Stop   chan struct{}
@@ -21,6 +20,7 @@ type Environment struct {
 }
 
 type EnvConfig struct {
+	Tag          string
 	VPNAddress   string
 	FrontendPort uint
 	Vlib         vbox.Library

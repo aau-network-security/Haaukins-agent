@@ -9,5 +9,5 @@ func (ec *EnvConfig) NewEnv(newLabs chan proto.Lab, labAmount int, workerAmount 
 }
 
 func worker(ready chan struct{}) {
-
+ 
 }

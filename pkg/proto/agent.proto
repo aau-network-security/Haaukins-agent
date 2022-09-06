@@ -2,7 +2,7 @@ syntax = "proto3";
 package agent;
 option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 
-//TODO add CreateLabForEnv function
+//TODO add CreateLabsForEnv function
 service Agent {
     rpc Init(InitRequest) returns (StatusResponse) {}
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
