@@ -2,23 +2,27 @@ syntax = "proto3";
 package agent;
 option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 
+//TODO add CreateLabForEnv function
 service Agent {
-    rpc CreateLabs(CreateLabsRequest) returns (CreateLabsResponse) {}
+    rpc Init(InitRequest) returns (StatusResponse) {}
+    rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
     rpc LabStream(Empty) returns (stream Lab) {}
 }
 
 message Empty{}
 
-message CreateLabsRequest {
-    string eventTag = 1;
-    Vms vms = 2;
-    int32 amount = 3;
-    repeated string exercises = 4;
-    string error = 5;
+message InitRequest {
+    string url = 1;
+    string authKey = 2;
+    string signKey = 3;
+    bool tlsEnabled = 4;
 }
 
-message Vms {
-    repeated VmConfig vmConfigs = 1;
+message CreatEnvRequest {
+    string eventTag = 1;
+    repeated VmConfig vms = 2;
+    int32 labAmount = 3;
+    repeated string exercises = 4;
 }
 
 message VmConfig {
@@ -27,7 +31,7 @@ message VmConfig {
     double cpu = 3;
 }
 
-message CreateLabsResponse {
+message StatusResponse {
     string message = 1;
 }
 

@@ -22,7 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentClient interface {
-	CreateLabs(ctx context.Context, in *CreateLabsRequest, opts ...grpc.CallOption) (*CreateLabsResponse, error)
+	Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
 }
 
@@ -34,9 +35,18 @@ func NewAgentClient(cc grpc.ClientConnInterface) AgentClient {
 	return &agentClient{cc}
 }
 
-func (c *agentClient) CreateLabs(ctx context.Context, in *CreateLabsRequest, opts ...grpc.CallOption) (*CreateLabsResponse, error) {
-	out := new(CreateLabsResponse)
-	err := c.cc.Invoke(ctx, "/agent.Agent/CreateLabs", in, out, opts...)
+func (c *agentClient) Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/Init", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/CreateEnvironment", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +89,8 @@ func (x *agentLabStreamClient) Recv() (*Lab, error) {
 // All implementations must embed UnimplementedAgentServer
 // for forward compatibility
 type AgentServer interface {
-	CreateLabs(context.Context, *CreateLabsRequest) (*CreateLabsResponse, error)
+	Init(context.Context, *InitRequest) (*StatusResponse, error)
+	CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error)
 	LabStream(*Empty, Agent_LabStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
@@ -88,8 +99,11 @@ type AgentServer interface {
 type UnimplementedAgentServer struct {
 }
 
-func (UnimplementedAgentServer) CreateLabs(context.Context, *CreateLabsRequest) (*CreateLabsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateLabs not implemented")
+func (UnimplementedAgentServer) Init(context.Context, *InitRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Init not implemented")
+}
+func (UnimplementedAgentServer) CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateEnvironment not implemented")
 }
 func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
@@ -107,20 +121,38 @@ func RegisterAgentServer(s grpc.ServiceRegistrar, srv AgentServer) {
 	s.RegisterService(&Agent_ServiceDesc, srv)
 }
 
-func _Agent_CreateLabs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateLabsRequest)
+func _Agent_Init_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AgentServer).CreateLabs(ctx, in)
+		return srv.(AgentServer).Init(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/agent.Agent/CreateLabs",
+		FullMethod: "/agent.Agent/Init",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServer).CreateLabs(ctx, req.(*CreateLabsRequest))
+		return srv.(AgentServer).Init(ctx, req.(*InitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_CreateEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreatEnvRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).CreateEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/CreateEnvironment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).CreateEnvironment(ctx, req.(*CreatEnvRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -154,8 +186,12 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AgentServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateLabs",
-			Handler:    _Agent_CreateLabs_Handler,
+			MethodName: "Init",
+			Handler:    _Agent_Init_Handler,
+		},
+		{
+			MethodName: "CreateEnvironment",
+			Handler:    _Agent_CreateEnvironment_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
