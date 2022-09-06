@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	aproto "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/rs/zerolog/log"
@@ -28,12 +27,7 @@ var (
 	UnauthorizedErr  = errors.New("You seem to not be logged in")
 )
 
-type ServiceConfig struct {
-	Grpc       string `yaml:"grpc"`
-	AuthKey    string `yaml:"auth-key"`
-	SignKey    string `yaml:"sign-key"`
-	TLSEnabled bool   `yaml:"tls-enabled"`
-}
+
 
 type Creds struct {
 	Token    string
@@ -131,44 +125,5 @@ func NewExerciseClientConn(config ServiceConfig) (eproto.ExerciseStoreClient, er
 		return nil, TranslateRPCErr(err)
 	}
 	client := eproto.NewExerciseStoreClient(conn)
-	return client, nil
-}
-
-func NewAgentClientConnection(config ServiceConfig) (aproto.AgentClient, error) {
-	log.Debug().Str("url", config.Grpc).Msg("connecting to agent")
-	creds := enableClientCertificates()
-	authCreds, err := constructAuthCreds(config.AuthKey, config.SignKey)
-	if err != nil {
-		return nil, fmt.Errorf("[exercise-service]: Error in constructing auth credentials %v", err)
-	}
-	if config.TLSEnabled {
-		log.Debug().Bool("TLS", config.TLSEnabled).Msg(" TLS for agent enabled, creating secure connection...")
-		dialOpts := []grpc.DialOption{
-			grpc.WithTransportCredentials(creds),
-			grpc.WithPerRPCCredentials(authCreds),
-			grpc.WithBlock(),
-			grpc.WithReturnConnectionError(),
-			grpc.WithTimeout(time.Second * 3),
-		}
-		conn, err := grpc.Dial(config.Grpc, dialOpts...)
-		if err != nil {
-			return nil, TranslateRPCErr(err)
-		}
-		client := aproto.NewAgentClient(conn)
-		return client, nil
-	}
-	authCreds.Insecure = true
-	dialOpts := []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithPerRPCCredentials(authCreds),
-		grpc.WithBlock(),
-		grpc.WithReturnConnectionError(),
-		grpc.WithTimeout(time.Second * 3),
-	}
-	conn, err := grpc.Dial(config.Grpc, dialOpts...)
-	if err != nil {
-		return nil, TranslateRPCErr(err)
-	}
-	client := aproto.NewAgentClient(conn)
 	return client, nil
 }
