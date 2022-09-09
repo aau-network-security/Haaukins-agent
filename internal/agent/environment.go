@@ -7,7 +7,8 @@ import (
 	"fmt"
 
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
@@ -32,7 +33,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.Tag = req.EventTag
 
 	// Get exercise info from exercise db
-	var exers []lab.Exercise
+	var exers []exercise.ExerciseConfig
 	exer, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
@@ -40,15 +41,15 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	log.Debug().Msgf("challenges: %v", exer)
 	// Unpack into exercise slice
 	for _, e := range exer.Exercises {
-		exercise, err := protobufToJson(e)
+		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err
 		}
-		estruct := lab.Exercise{}
-		json.Unmarshal([]byte(exercise), &estruct)
+		estruct := exercise.ExerciseConfig{}
+		json.Unmarshal([]byte(ex), &estruct)
 		exers = append(exers, estruct)
 	}
-	envConf.Exercises = exers
+	envConf.LabConf.Exercises = exers
 
 	// Insert frontends for environment into environment config
 	var frontends = []vbox.InstanceConfig{}
@@ -60,10 +61,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 		}
 		frontends = append(frontends, frontend)
 	}
-	envConf.Frontends = append(envConf.Frontends, frontends...)
+	envConf.LabConf.Frontends = append(envConf.LabConf.Frontends, frontends...)
 
 	// Set the vlib
-	envConf.Vlib = a.vlib
+	envConf.LabConf.Vlib = a.vlib
 
 	// Get VPN address for environment if participant want to switch from browser to VPN
 	VPNAddress, err := getVPNIP()
@@ -72,8 +73,21 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 		return nil, err
 	}
 	envConf.VPNAddress = VPNAddress
+	envConf.VpnConfig = wg.WireGuardConfig{
+		Endpoint: a.config.VPNService.Endpoint,
+		Port:     a.config.VPNService.Port,
+		AuthKey:  a.config.VPNService.AuthKey,
+		SignKey:  a.config.VPNService.SignKey,
+		Enabled:  a.config.VPNService.TLSEnabled,
+		Dir:      a.config.VPNService.WgConfDir,
+	}
 
 	// Create environment
+	// TODO attach workerpool
+	_, err = envConf.NewEnv(a.newLabs, req.LabAmount)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating environment")
+	}
 
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
 }

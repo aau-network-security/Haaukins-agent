@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 )
 
 type EnvPool struct {
@@ -13,19 +13,17 @@ type EnvPool struct {
 }
 
 type Environment struct {
-	Config EnvConfig
-	Labs   []lab.Lab
-	Stop   chan struct{}
+	EnvConfig EnvConfig
+	Labs      []lab.Lab
+	Stop      chan struct{}
 	// Fill out rest when starting to make labs
 }
 
 type EnvConfig struct {
-	Tag          string
-	VPNAddress   string
-	FrontendPort uint
-	Vlib         vbox.Library
-	Frontends    []vbox.InstanceConfig
-	Exercises    []lab.Exercise
+	Tag        string
+	VPNAddress string
+	VpnConfig  wg.WireGuardConfig
+	LabConf    lab.LabHost
 }
 
 type Category struct {
