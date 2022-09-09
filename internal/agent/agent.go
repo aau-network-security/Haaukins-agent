@@ -17,6 +17,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/aau-network-security/haaukins-agent/internal/worker"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
@@ -34,6 +35,7 @@ type Agent struct {
 	auth        Authenticator
 	vlib        vbox.Library
 	pb.UnimplementedAgentServer
+	workerPool  worker.WorkerPool
 	newLabs chan pb.Lab
 }
 
@@ -80,6 +82,9 @@ func NewConfigFromFile(path string) (*Config, error) {
 		c.AuthKey = DEFAULT_AUTH
 	}
 
+	if c.MaxWorkers == 0 {
+		c.MaxWorkers = 5
+	}
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get current working directory for redis")
@@ -170,6 +175,10 @@ func New(conf *Config) (*Agent, error) {
 			return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
 		}
 	}
+
+	workerPool := worker.NewWorkerPool(conf.MaxWorkers)
+	workerPool.Run()
+
 	//log.Debug().Int("State", int(redisContainer.Info().State))
 	d := &Agent{
 		initialized: initialized,
@@ -178,6 +187,7 @@ func New(conf *Config) (*Agent, error) {
 			Host: "127.0.0.1:6379",
 			DB:   0,
 		},
+		workerPool: workerPool,
 		vlib:    vbox.NewLibrary(conf.OvaDir),
 		auth:    NewAuthenticator(conf.SignKey, conf.AuthKey),
 		newLabs: make(chan pb.Lab, 10),
@@ -226,7 +236,7 @@ func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.Status
 		log.Error().Err(err).Msg("error connecting to exercise service")
 		return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
 	}
-	
+
 	a.config.ExerciseService = exConf
 
 	data, err := yaml.Marshal(a.config)
