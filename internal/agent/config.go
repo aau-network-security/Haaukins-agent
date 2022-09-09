@@ -9,6 +9,7 @@ type Config struct {
 	Port               uint                             `yaml:"port"`
 	AuthKey            string                           `yaml:"auth-key"`
 	SignKey            string                           `yaml:"sign-key"`
+	MaxWorkers         int                              `yaml:"max-workers"`
 	RedisDataPath      string                           `yaml:"redis-data-path"`
 	FileTransferRoot   string                           `yaml:"file-transfer-root"`
 	OvaDir             string                           `yaml:"ova-dir"`
@@ -20,7 +21,7 @@ type Config struct {
 
 type VPNconf struct {
 	Endpoint   string `yaml:"endpoint"`
-	Port       string `yaml:"port"`
+	Port       uint64 `yaml:"port"`
 	AuthKey    string `yaml:"auth-key"`
 	SignKey    string `yaml:"sign-key"`
 	WgConfDir  string `yaml:"wg-conf-dir"`
