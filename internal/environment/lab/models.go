@@ -24,10 +24,10 @@ type Lab struct {
 	IsVPN             bool
 }
 
-type LabHost struct {
+type LabConf struct {
 	Vlib              vbox.Library
 	Frontends         []vbox.InstanceConfig
-	Exercises         []exercise.ExerciseConfig
+	ExerciseConfs     []exercise.ExerciseConfig
 	DisabledExercises []string
 }
 
