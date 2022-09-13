@@ -26,6 +26,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	if !a.initialized {
 		return nil, errors.New("agent not yet initialized")
 	}
+	log.Debug().Msgf("got createEnv request: %v", req)
 
 	// Create a new environment for event if it does not exists
 	// Setting up the env config
@@ -33,23 +34,23 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.Tag = req.EventTag
 
 	// Get exercise info from exercise db
-	var exers []exercise.ExerciseConfig
-	exer, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
+	var exerConfs []exercise.ExerciseConfig
+	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
 	}
-	log.Debug().Msgf("challenges: %v", exer)
+	log.Debug().Msgf("challenges: %v", exerDbConfs)
 	// Unpack into exercise slice
-	for _, e := range exer.Exercises {
+	for _, e := range exerDbConfs.Exercises {
 		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err
 		}
 		estruct := exercise.ExerciseConfig{}
 		json.Unmarshal([]byte(ex), &estruct)
-		exers = append(exers, estruct)
+		exerConfs = append(exerConfs, estruct)
 	}
-	envConf.LabConf.Exercises = exers
+	envConf.LabConf.ExerciseConfs = exerConfs
 
 	// Insert frontends for environment into environment config
 	var frontends = []vbox.InstanceConfig{}
@@ -84,7 +85,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 
 	// Create environment
 	// TODO attach workerpool
-	_, err = envConf.NewEnv(a.newLabs, req.LabAmount)
+	_, err = envConf.NewEnv(ctx, a.newLabs, req.LabAmount)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating environment")
 	}
