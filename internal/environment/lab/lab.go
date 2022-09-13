@@ -16,34 +16,42 @@ import (
 const defaultImageMEMMB = 4096
 
 // TODO Add start function in here instaed
-func (lh *LabHost) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab, error) {
+// Creates and starts a new virtual lab
+func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string, envLabs *map[string]Lab) (Lab, error) {
 	lab := Lab{
 		ExTags: make(map[string]*exercise.Exercise),
-		Vlib:   lh.Vlib,
+		Vlib:   lc.Vlib,
 	}
-	if err := lab.Create(ctx, isVPN); err != nil {
+
+	// Create lab network
+	if err := lab.CreateNetwork(ctx, isVPN); err != nil {
 		return Lab{}, err
 	}
 
-	if err := lab.AddExercises(ctx, lh.Exercises...); err != nil {
+	// Add exercises to new lab
+	if err := lab.AddExercises(ctx, lc.ExerciseConfs...); err != nil {
 		return Lab{}, fmt.Errorf("error adding exercises to lab: %v", err)
 	}
 
 	lab.DockerHost = docker.NewHost()
 	lab.Frontends = map[uint]FrontendConf{}
+	// Generate unique tag for lab
 	lab.Tag = generateTag(eventTag)
 
-	for _, f := range lh.Frontends {
+	// Configure and add frontends to lab
+	for _, f := range lc.Frontends {
 		port := virtual.GetAvailablePort()
 		if _, err := lab.addFrontend(ctx, f, port); err != nil {
 			return Lab{}, err
 		}
 	}
+	// TODO start lab here as well
 
 	return lab, nil
 }
 
-func (l *Lab) Create(ctx context.Context, isVPN bool) error {
+// CreateNetwork network
+func (l *Lab) CreateNetwork(ctx context.Context, isVPN bool) error {
 	network, err := docker.NewNetwork(isVPN)
 	if err != nil {
 		return fmt.Errorf("docker new network err %v", err)
@@ -91,6 +99,7 @@ func (l *Lab) addFrontend(ctx context.Context, conf vbox.InstanceConfig, rdpPort
 	return vm, nil
 }
 
+//prepends a uuid to the eventTag
 func generateTag(eventTag string) string {
 	id := uuid.New()
 	return fmt.Sprintf("%s-%s", eventTag, id)
