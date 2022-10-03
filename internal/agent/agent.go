@@ -35,8 +35,8 @@ type Agent struct {
 	auth        Authenticator
 	vlib        vbox.Library
 	pb.UnimplementedAgentServer
-	workerPool  worker.WorkerPool
-	newLabs chan pb.Lab
+	workerPool worker.WorkerPool
+	newLabs    chan pb.Lab
 }
 
 type State struct {
@@ -188,9 +188,9 @@ func New(conf *Config) (*Agent, error) {
 			DB:   0,
 		},
 		workerPool: workerPool,
-		vlib:    vbox.NewLibrary(conf.OvaDir),
-		auth:    NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs: make(chan pb.Lab, 10),
+		vlib:       vbox.NewLibrary(conf.OvaDir),
+		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs:    make(chan pb.Lab, 10),
 		State: &State{
 			ExClient: exClient,
 			EnvPool:  &env.EnvPool{},
