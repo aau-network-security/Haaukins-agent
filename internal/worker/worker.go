@@ -25,7 +25,9 @@ func (wp *workerPool) Run() {
 		log.Debug().Int("workerId", i+1).Msg("starting worker")
 		go func(workerID int) {
 			for task := range wp.queuedTasks {
+				log.Debug().Msgf("worker %d running task", workerID)
 				task()
+				log.Debug().Msgf("worker %d done running task", workerID)
 			}
 		}(i + 1)
 	}

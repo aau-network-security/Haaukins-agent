@@ -3,8 +3,10 @@ package lab
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dhcp"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
@@ -17,15 +19,16 @@ const defaultImageMEMMB = 4096
 
 // TODO Add start function in here instaed
 // Creates and starts a new virtual lab
-func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string, envLabs *map[string]Lab) (Lab, error) {
+func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab, error) {
 	lab := Lab{
-		ExTags: make(map[string]*exercise.Exercise),
-		Vlib:   lc.Vlib,
+		ExTags:          make(map[string]*exercise.Exercise),
+		Vlib:            lc.Vlib,
+		ExerciseConfigs: lc.ExerciseConfs,
 	}
 
 	// Create lab network
 	if err := lab.CreateNetwork(ctx, isVPN); err != nil {
-		return Lab{}, err
+		return Lab{}, fmt.Errorf("error creating network for lab: %v", err)
 	}
 
 	// Add exercises to new lab
@@ -45,9 +48,85 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string, envL
 			return Lab{}, err
 		}
 	}
-	// TODO start lab here as well
 
 	return lab, nil
+}
+
+func (l *Lab) Start(ctx context.Context) error {
+	if err := l.refreshDNS(ctx); err != nil {
+		log.Error().Err(err).Msg("error refreshing dns")
+		return err
+	}
+
+	var err error
+	l.DhcpServer, err = dhcp.New(l.Network.FormatIP)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating dhcpserver")
+		return err
+	}
+
+	if err := l.DhcpServer.Run(ctx); err != nil {
+		log.Error().Err(err).Msg("error running dhcpserver")
+		return err
+	}
+
+	if _, err := l.Network.Connect(l.DhcpServer.Container(), 2); err != nil {
+		return err
+	}
+	var res error
+	var wg sync.WaitGroup
+	for _, ex := range l.Exercises {
+		wg.Add(1)
+		go func(e *exercise.Exercise) {
+			if err := e.Start(ctx); err != nil {
+				res = err
+			}
+			wg.Done()
+		}(ex)
+	}
+	wg.Wait()
+	if res != nil {
+		return res
+	}
+
+	for _, fconf := range l.Frontends {
+		if err := fconf.vm.Start(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (l *Lab) refreshDNS(ctx context.Context) error {
+
+	if l.DnsServer != nil {
+		if err := l.DnsServer.Close(); err != nil {
+			return err
+		}
+	}
+	var rrSet []dns.RR
+	for _, e := range l.Exercises {
+
+		for _, record := range e.DnsRecords {
+			rrSet = append(rrSet, dns.RR{Name: record.Name, Type: record.Type, RData: record.RData})
+		}
+	}
+
+	serv, err := dns.New(rrSet)
+	if err != nil {
+		return err
+	}
+	l.DnsServer = serv
+
+	if err := l.DnsServer.Run(ctx); err != nil {
+		return err
+	}
+
+	if _, err := l.Network.Connect(l.DnsServer.Container(), dns.PreferedIP); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // CreateNetwork network

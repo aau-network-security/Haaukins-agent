@@ -13,6 +13,7 @@ type Lab struct {
 	Frontends         map[uint]FrontendConf
 	ExTags            map[string]*exercise.Exercise
 	Exercises         []*exercise.Exercise
+	ExerciseConfigs   []exercise.ExerciseConfig
 	DisabledExercises []string
 	DnsRecords        []*DNSRecord
 	DockerHost        docker.Host

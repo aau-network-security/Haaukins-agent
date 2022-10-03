@@ -5,6 +5,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
@@ -122,6 +123,26 @@ func (e *Exercise) Create(ctx context.Context) error {
 	e.Machines = machines
 
 	return nil
+}
+
+func (e *Exercise) Start(ctx context.Context) error {
+	var res error
+	var wg sync.WaitGroup
+
+	for _, m := range e.Machines {
+		wg.Add(1)
+		go func(m virtual.Instance) {
+			if m.Info().State != virtual.Running {
+				if err := m.Start(ctx); err != nil && res == nil {
+					res = err
+				}
+			}
+			wg.Done()
+		}(m)
+	}
+	wg.Wait()
+
+	return res
 }
 
 func CreateContainer(ctx context.Context, conf docker.ContainerConfig) (docker.Container, error) {
