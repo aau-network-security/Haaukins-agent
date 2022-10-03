@@ -7,6 +7,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/worker"
 )
 
 // General environment types
@@ -17,8 +18,7 @@ type EnvPool struct {
 
 type Environment struct {
 	EnvConfig EnvConfig
-	Labs      []lab.Lab
-	Stop      chan struct{}
+	Labs      map[string]lab.Lab
 	// Fill out rest when starting to make labs
 }
 
@@ -26,6 +26,7 @@ type EnvConfig struct {
 	Tag        string
 	VPNAddress string
 	VpnConfig  wg.WireGuardConfig
+	WorkerPool worker.WorkerPool
 	LabConf    lab.LabConf
 }
 
