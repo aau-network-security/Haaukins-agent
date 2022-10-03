@@ -22,6 +22,7 @@ var (
 	OvaSuffix       = ".ova"
 )
 
+// TODO add comments
 func NewExercise(conf ExerciseConfig, vlib vbox.Library, net docker.Network, dnsAddr string) *Exercise {
 	var containerOpts []ContainerOptions
 	var vboxOpts []ExerciseInstanceConfig

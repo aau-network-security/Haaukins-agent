@@ -20,7 +20,7 @@ type Server struct {
 	dns      string
 	subnet   string
 }
-
+// TODO add comments
 func New(format func(n int) string) (*Server, error) {
 	f, err := ioutil.TempFile("", "dhcpd-conf")
 	if err != nil {

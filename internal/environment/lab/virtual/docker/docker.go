@@ -30,6 +30,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO comments and docs
+
 var (
 	DefaultClient     *docker.Client
 	DefaultLinkBridge *defaultBridge

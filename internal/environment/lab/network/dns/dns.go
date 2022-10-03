@@ -49,6 +49,7 @@ type RR struct {
 	RData string
 }
 
+// TODO add comments
 func (rr *RR) Format() string {
 	return fmt.Sprintf("%s IN %s %s", rr.Name, rr.Type, rr.RData)
 }

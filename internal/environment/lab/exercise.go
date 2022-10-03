@@ -8,7 +8,7 @@ import (
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 )
-
+// TODO add comments 
 func (l *Lab) AddExercises(ctx context.Context, confs ...exercise.ExerciseConfig) error {
 	var e *exercise.Exercise
 	var aRecord string

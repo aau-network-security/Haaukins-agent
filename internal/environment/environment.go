@@ -14,15 +14,11 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 	// Make worker work
 
 	var env *Environment
-	
-	// TODO Start labs as well in new lab before continueing
+
 	guac, err := NewGuac(ctx, ec.Tag)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("lab returned by NewLab: %v", lab)
-	
-
 
 	env.Labs = make(map[string]lab.Lab)
 	m := &sync.RWMutex{}
@@ -44,7 +40,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 					return
 				}
 				// Sending lab info to daemon
-				// TODO Figure out what exact data should be sent
+				// TODO Figure out what exact data should be returned to daemon
 				newLab := proto.Lab{
 					Tag:      lab.Tag,
 					EventTag: ec.Tag,
@@ -59,6 +55,5 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 		}
 	}
 
-	
 	return nil, nil
 }

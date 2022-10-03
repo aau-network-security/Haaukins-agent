@@ -12,6 +12,7 @@ import (
 	"unsafe"
 )
 
+// TODO add comments
 var (
 	ErrInvalidFlagFormat = errors.New("Invalid flag format")
 )

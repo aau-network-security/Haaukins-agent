@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// TODO comments and docs
 type InstanceConfig struct {
 	Image    string  `yaml:"image"`
 	MemoryMB uint    `yaml:"memoryMB"`

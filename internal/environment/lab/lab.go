@@ -17,7 +17,7 @@ import (
 
 const defaultImageMEMMB = 4096
 
-// TODO Add start function in here instaed
+// TODO Add comments to remaining functions
 // Creates and starts a new virtual lab
 func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab, error) {
 	lab := Lab{
