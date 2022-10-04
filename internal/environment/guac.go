@@ -61,9 +61,13 @@ func NewGuac(ctx context.Context, eventTag string) (Guacamole, error) {
 	// TODO finish newGuac function
 }
 
+/*
+Creates the necessary containers for guacamole and configures the instance with a new admin password
+*/
 func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	_ = vbox.CreateEventFolder(eventTag)
 
+	// If user is not specified, filetransfer mount is owned by root, and can therefore not be accessed by vbox vm
 	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	log.Debug().Str("user", user).Msg("starting guacd")
 
@@ -121,6 +125,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 		}
 	}
 
+	// Run the containers for configuration purposes
 	for _, cname := range []string{"guacd", "db", "web"} {
 		c := containers[cname]
 
@@ -143,6 +148,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 		}
 	}
 
+	// Configure guacamole for the environment
 	if err := guac.configureInstance(); err != nil {
 		closeAll()
 		return err
@@ -154,6 +160,8 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	return nil
 }
 
+// Configures a guacamole instance for environment.
+// It simply changes the default password
 func (guac *Guacamole) configureInstance() error {
 	temp := &Guacamole{
 		Client:    guac.Client,

@@ -82,6 +82,7 @@ func TranslateRPCErr(err error) error {
 	return err
 }
 
+// Creating credentials for grpc connection
 func constructAuthCreds(authKey, signKey string) (Creds, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		AUTH_KEY: authKey,

@@ -32,6 +32,9 @@ func NewAuthenticator(Skey, AKey string) Authenticator {
 	return &auth{sKey: Skey, aKey: AKey}
 }
 
+/* Probably from googles grpc docs or something or some article
+Checks incoming token from incoming context to validate whoever is trying to use the agents GRPc calls
+*/
 func (a *auth) AuthenticateContext(ctx context.Context) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {

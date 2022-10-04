@@ -29,7 +29,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 		log.Error().Err(err).Msg("error creating new guacamole")
 		return nil, err
 	}
-
+	// Getting wireguard client from config
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
@@ -45,6 +45,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 
 	var eventVPNIPs []int
 
+	// TODO Make dynamic based on amount of users on a team
 	ipAddrs := makeRange(2, 254)
 	for i := 0; i < 4; i++ {
 		eventVPNIPs = append(eventVPNIPs, ipAddrs...)
@@ -64,6 +65,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 	env.Labs = make(map[string]lab.Lab)
 	m := &sync.RWMutex{}
 	// If it is a beginner event, labs will be created and be available beforehand
+	// TODO: add more vms based on amount of users on a team
 	if labAmount > 0 {
 		for i := 0; i < int(labAmount); i++ {
 			// Adding lab creation task to taskqueue
@@ -102,6 +104,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 }
 
 func (env *Environment) Start(ctx context.Context) error {
+	// Just for Logging purposes
 	var frontendNames []string
 	for _, f := range env.EnvConfig.LabConf.Frontends {
 		frontendNames = append(frontendNames, f.Image)
@@ -111,11 +114,14 @@ func (env *Environment) Start(ctx context.Context) error {
 		Strs("Frontends", frontendNames).
 		Msg("starting environment")
 
+	// Getting port to listen on for VPN for the environment
 	port := rand.Intn(VPNPortmax-VPNPortmin) + VPNPortmin
 	for checkPort(port) {
 		port = rand.Intn(VPNPortmax-VPNPortmin) + VPNPortmin
 	}
 	env.EnvConfig.VPNEndpointPort = port
+
+	// Initializing wireguard for the port
 	log.Info().Int("port", port).Msg("initializing VPN endpoinrt on port")
 	_, err := env.Wg.InitializeI(context.Background(), &wg.IReq{
 		Address:    env.EnvConfig.VPNAddress,
@@ -125,9 +131,12 @@ func (env *Environment) Start(ctx context.Context) error {
 		IName:      string(env.EnvConfig.Tag),
 	})
 	if err != nil {
+		// Continue without vpn if err is present
+		// TODO If vpn is for some reason not initialized, it should be possible to try to reininialize for this specific agent and environment
 		log.Error().Err(err).Msg("error initializing vpn endpoint... \n continueing wihout, reininialize from admin webclient")
 	}
-
+	
+	// Start the guac containers
 	if err := env.Guac.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("error starting guac")
 		return errors.New("error while starting guac")

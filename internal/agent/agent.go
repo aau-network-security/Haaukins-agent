@@ -85,6 +85,8 @@ func NewConfigFromFile(path string) (*Config, error) {
 	if c.MaxWorkers == 0 {
 		c.MaxWorkers = 5
 	}
+
+	// In case paths has not been set, use working directory
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get current working directory for redis")
@@ -113,11 +115,13 @@ func NewConfigFromFile(path string) (*Config, error) {
 
 func New(conf *Config) (*Agent, error) {
 	ctx := context.Background()
-	// Setting up the redis container
+	// Creating filetransfer root if not exists
 	err := vbox.CreateFileTransferRoot(conf.FileTransferRoot)
 	if err != nil {
 		log.Fatal().Msgf("Error while creating file transfer root: %s", err)
 	}
+
+	// Setting up the redis container
 	if _, err := os.Stat(conf.RedisDataPath); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(conf.RedisDataPath, os.ModePerm)
 		if err != nil {
@@ -154,7 +158,7 @@ func New(conf *Config) (*Agent, error) {
 			Name:      "redis_cache",
 			UseBridge: true,
 			Mounts: []string{
-				conf.RedisDataPath + ":/data",
+				conf.RedisDataPath + ":/data", // Mounting for persistent storage
 			},
 			PortBindings: map[string]string{
 				"6379": "127.0.0.1:6379",
@@ -180,10 +184,13 @@ func New(conf *Config) (*Agent, error) {
 		}
 	}
 
+	// Creating and starting a workerPool for lab creation
+	// This is to ensure that resources are not spent without having them
+	// Workeramount can be configured from the config
 	workerPool := worker.NewWorkerPool(conf.MaxWorkers)
 	workerPool.Run()
 
-	//log.Debug().Int("State", int(redisContainer.Info().State))
+	// Creating agent struct
 	d := &Agent{
 		initialized: initialized,
 		config:      conf,
@@ -228,12 +235,14 @@ func (d *Agent) NewGRPCServer(opts ...grpc.ServerOption) *grpc.Server {
 
 // Connect to exdb based on what creds sent by daemon, and write to config
 func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.StatusResponse, error) {
+	// Creating service config based on request from daemon
 	var exConf = ServiceConfig{
 		Grpc:       req.Url,
 		AuthKey:    req.AuthKey,
 		SignKey:    req.SignKey,
 		TLSEnabled: req.TlsEnabled,
 	}
+	// Creating new exercise service connection from config
 	log.Debug().Msgf("request: %v", req)
 	exClient, err := NewExerciseClientConn(exConf)
 	if err != nil {
@@ -241,14 +250,17 @@ func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.Status
 		return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
 	}
 
+	// Saving the config in the agent config
 	a.config.ExerciseService = exConf
 
+	// Updating the config
 	data, err := yaml.Marshal(a.config)
 	if err != nil {
 		log.Error().Err(err).Msg("error marshalling yaml")
 		return nil, errors.New(fmt.Sprintf("error marshalling yaml: %s", err))
 	}
 
+	// Truncates existing file to overwrite with new data
 	f, err := os.Create(configPath)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating or truncating config file")
