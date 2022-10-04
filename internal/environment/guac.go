@@ -36,10 +36,10 @@ func (ge *GuacError) Error() string {
 	return fmt.Sprintf("guacamole: trying to %s. failed: %s", ge.action, ge.err)
 }
 
-func NewGuac(ctx context.Context, eventTag string) (*Guacamole, error) {
+func NewGuac(ctx context.Context, eventTag string) (Guacamole, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
-		return nil, err
+		return Guacamole{}, err
 	}
 
 	client := &http.Client{
@@ -48,14 +48,16 @@ func NewGuac(ctx context.Context, eventTag string) (*Guacamole, error) {
 
 	adminPass := uuid.New().String()
 	log.Debug().Str("guacpassword", adminPass).Msg("setting password for guac")
-	guac := &Guacamole{
+	guac := Guacamole{
 		Client:    client,
 		AdminPass: adminPass,
 	}
 
 	if err := guac.create(ctx, eventTag); err != nil {
-
+		log.Error().Err(err).Msg("error creating guac containers")
+		return Guacamole{}, err
 	}
+	return guac, nil
 	// TODO finish newGuac function
 }
 
@@ -147,7 +149,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	}
 
 	guac.Containers = containers
-	guac.stop()
+	guac.Stop()
 
 	return nil
 }
@@ -352,11 +354,26 @@ func (guac *Guacamole) authAction(action string, a func(string) (*http.Response,
 	return nil
 }
 
-func (guac *Guacamole) stop() error {
+func (guac *Guacamole) Stop() error {
 	for _, container := range guac.Containers {
 		if err := container.Stop(); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (guac *Guacamole) Start(ctx context.Context) error {
+	for _, container := range guac.Containers {
+		if err := container.Start(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func NewGuacUserStore() *GuacUserStore {
+	return &GuacUserStore{
+		teams: map[string]GuacUser{},
+	}
 }

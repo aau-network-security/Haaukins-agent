@@ -114,6 +114,10 @@ func NewConfigFromFile(path string) (*Config, error) {
 func New(conf *Config) (*Agent, error) {
 	ctx := context.Background()
 	// Setting up the redis container
+	err := vbox.CreateFileTransferRoot(conf.FileTransferRoot)
+	if err != nil {
+		log.Fatal().Msgf("Error while creating file transfer root: %s", err)
+	}
 	if _, err := os.Stat(conf.RedisDataPath); errors.Is(err, os.ErrNotExist) {
 		err := os.Mkdir(conf.RedisDataPath, os.ModePerm)
 		if err != nil {

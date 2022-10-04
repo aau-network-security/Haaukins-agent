@@ -21,6 +21,7 @@ var (
 
 /* Creates a new lab environment for a new event.
 Labs can afterwards be added using the CreateLabsForEnv call */
+// TODO Check if environment exists, figure out what the logic should be.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
 	if !a.initialized {
@@ -40,7 +41,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
 	}
-	log.Debug().Msgf("challenges: %v", exerDbConfs)
+	//log.Debug().Msgf("challenges: %v", exerDbConfs)
 	// Unpack into exercise slice
 	for _, e := range exerDbConfs.Exercises {
 		ex, err := protobufToJson(e)
@@ -69,12 +70,13 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.LabConf.Vlib = a.vlib
 
 	// Get VPN address for environment if participant want to switch from browser to VPN
-	VPNAddress, err := getVPNIP()
+	vpnIP, err := getVPNIP()
 	if err != nil {
 		log.Error().Err(err).Msg("error getting vpn ip address")
 		return nil, err
 	}
-	envConf.VPNAddress = VPNAddress
+	vpnAddress := fmt.Sprintf("%s.240.1/22", vpnIP)
+	envConf.VPNAddress = vpnAddress
 	envConf.VpnConfig = wg.WireGuardConfig{
 		Endpoint: a.config.VPNService.Endpoint,
 		Port:     a.config.VPNService.Port,
@@ -85,13 +87,17 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 
 	// Create environment
-	// TODO attach workerpool
-	_, err = envConf.NewEnv(ctx, a.newLabs, req.LabAmount)
+	env, err := envConf.NewEnv(ctx, a.newLabs, req.LabAmount)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating environment")
 		return &proto.StatusResponse{Message: "Error creating environment"}, err
 	}
+	// TODO Still need to figure out how to keep the state of the agent
 
+	// Start the environment
+	go env.Start(context.TODO())
+
+	// TODO add env to envpool
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
 }
 

@@ -17,17 +17,25 @@ type EnvPool struct {
 }
 
 type Environment struct {
-	EnvConfig EnvConfig
-	Labs      map[string]lab.Lab
+	EnvConfig     EnvConfig
+	Guac          Guacamole
+	IpT           IPTables
+	IpRules       map[string]IpRules
+	IpAddrs       []int
+	Wg            wg.WireguardClient
+	GuacUserStore *GuacUserStore
+	Dockerhost    docker.Host
+	Labs          map[string]lab.Lab
 	// Fill out rest when starting to make labs
 }
 
 type EnvConfig struct {
-	Tag        string
-	VPNAddress string
-	VpnConfig  wg.WireGuardConfig
-	WorkerPool worker.WorkerPool
-	LabConf    lab.LabConf
+	Tag             string
+	VPNAddress      string
+	VPNEndpointPort int
+	VpnConfig       wg.WireGuardConfig
+	WorkerPool      worker.WorkerPool
+	LabConf         lab.LabConf
 }
 
 type Category struct {
@@ -45,6 +53,11 @@ type Profile struct {
 type PChallenge struct {
 	Tag  string `json:"tag,omitempty"`
 	Name string `json:"name,omitempty"`
+}
+
+type IpRules struct {
+	Labsubnet string
+	VpnIps    string
 }
 
 // Guac types
@@ -70,4 +83,14 @@ type createUserInput struct {
 	Username   string               `json:"username"`
 	Password   string               `json:"password"`
 	Attributes createUserAttributes `json:"attributes"`
+}
+
+type GuacUser struct {
+	Username string
+	Password string
+}
+
+type GuacUserStore struct {
+	m     sync.RWMutex
+	teams map[string]GuacUser
 }

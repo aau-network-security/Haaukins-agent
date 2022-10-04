@@ -31,7 +31,7 @@ func NewExercise(conf ExerciseConfig, vlib vbox.Library, net docker.Network, dns
 		if strings.Contains(c.Image, OvaSuffix) {
 			vboxOpts = append(vboxOpts, c)
 		} else {
-			containerOpts = conf.ContainerOpts()
+			containerOpts = conf.CreateContainerOpts()
 			break
 		}
 	}
@@ -153,7 +153,7 @@ func CreateContainer(ctx context.Context, conf docker.ContainerConfig) (docker.C
 	return c, err
 }
 
-func (e ExerciseConfig) ContainerOpts() []ContainerOptions {
+func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 	var opts []ContainerOptions
 
 	for _, conf := range e.Instance {
@@ -168,7 +168,9 @@ func (e ExerciseConfig) ContainerOpts() []ContainerOptions {
 			if value == "" {
 				// flag is not static
 				value = NewFlag().String()
-				envVars[flag.EnvVar] = value
+				if flag.EnvVar != "" {
+					envVars[flag.EnvVar] = value
+				}
 			}
 
 			challenges = append(challenges, Challenge{
@@ -206,4 +208,23 @@ func (e ExerciseConfig) ContainerOpts() []ContainerOptions {
 	}
 
 	return opts
+}
+
+func (e *Exercise) GetChallenges() []Challenge {
+	var challenges []Challenge
+	for _, opt := range e.ContainerOpts {
+		challenges = append(challenges, opt.Challenges...)
+	}
+
+	for _, opt := range e.VboxOpts {
+		for _, f := range opt.Flags {
+			challenges = append(challenges, Challenge{
+				Name:  f.Name,
+				Tag:   f.Tag,
+				Value: f.StaticFlag,
+			})
+		}
+	}
+
+	return challenges
 }

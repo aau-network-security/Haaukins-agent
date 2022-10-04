@@ -52,3 +52,11 @@ func (l *Lab) AddExercises(ctx context.Context, confs ...exercise.ExerciseConfig
 
 	return nil
 }
+
+func (l *Lab) GetChallenges() []exercise.Challenge {
+	var challenges []exercise.Challenge
+	for _, e := range l.Exercises {
+		challenges = append(challenges, e.GetChallenges()...)
+	}
+	return challenges
+}
