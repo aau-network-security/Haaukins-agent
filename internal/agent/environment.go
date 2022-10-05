@@ -98,6 +98,15 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	go env.Start(context.TODO())
 
 	// TODO add env to envpool
+	a.State.EnvPool.Em.Lock()
+	a.State.EnvPool.Envs[env.EnvConfig.Tag] = env
+	a.State.EnvPool.Em.Unlock()
+
+	a.State.EnvPool.Em.RLock()
+	for k, _ := range a.State.EnvPool.Envs {
+		log.Debug().Str("key", k).Msg("envs in env pool")
+	}
+	a.State.EnvPool.Em.RUnlock()
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
 }
 
