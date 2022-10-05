@@ -22,18 +22,18 @@ var (
 )
 
 // TODO: Restructure folder structure, to be hierarchical
-func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmount int32) (*Environment, error) {
+func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmount int32) (Environment, error) {
 	// Make worker work
 	guac, err := NewGuac(ctx, ec.Tag)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating new guacamole")
-		return nil, err
+		return Environment{}, err
 	}
 	// Getting wireguard client from config
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
-		return nil, err
+		return Environment{}, err
 	}
 
 	ipT := IPTables{
@@ -51,7 +51,8 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 		eventVPNIPs = append(eventVPNIPs, ipAddrs...)
 	}
 
-	env := &Environment{
+	env := Environment{
+		EnvConfig:     *ec,
 		Guac:          guac,
 		IpAddrs:       eventVPNIPs,
 		Labs:          map[string]lab.Lab{},
@@ -62,7 +63,6 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 		IpRules:       map[string]IpRules{},
 	}
 
-	env.Labs = make(map[string]lab.Lab)
 	m := &sync.RWMutex{}
 	// If it is a beginner event, labs will be created and be available beforehand
 	// TODO: add more vms based on amount of users on a team
@@ -85,7 +85,6 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 				// Sending lab info to daemon
 				// TODO Figure out what exact data should be returned to daemon
 				// TODO use new getChallenges function to get challenges for lab to return flag etc.
-				log.Debug().Msgf("%v", lab.Exercises)
 				newLab := proto.Lab{
 					Tag:      lab.Tag,
 					EventTag: ec.Tag,
@@ -135,7 +134,7 @@ func (env *Environment) Start(ctx context.Context) error {
 		// TODO If vpn is for some reason not initialized, it should be possible to try to reininialize for this specific agent and environment
 		log.Error().Err(err).Msg("error initializing vpn endpoint... \n continueing wihout, reininialize from admin webclient")
 	}
-	
+
 	// Start the guac containers
 	if err := env.Guac.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("error starting guac")
