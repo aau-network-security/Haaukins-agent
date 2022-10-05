@@ -204,7 +204,9 @@ func New(conf *Config) (*Agent, error) {
 		newLabs:    make(chan pb.Lab, 10),
 		State: &State{
 			ExClient: exClient,
-			EnvPool:  &env.EnvPool{},
+			EnvPool: &env.EnvPool{
+				Envs: map[string]env.Environment{},
+			},
 		},
 	}
 	return d, nil
