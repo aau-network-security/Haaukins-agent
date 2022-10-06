@@ -73,7 +73,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 
 	containers := map[string]docker.Container{}
 	containers["guacd"] = docker.NewContainer(docker.ContainerConfig{
-		Image:     "guacamole/guacd:1.2.0",
+		Image:     "guacamole/guacd:1.4.0",
 		UseBridge: true,
 		Labels: map[string]string{
 			"hkn": "guacamole_guacd",
@@ -83,10 +83,10 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 		},
 		User: user,
 	})
-
+	// TODO: push to gitlab
 	mysqlPass := uuid.New().String()
 	containers["db"] = docker.NewContainer(docker.ContainerConfig{
-		Image: "aaunetworksecurity/guacamole-mysql",
+		Image: "guacamole-mysql", //Image: "aaunetworksecurity/guacamole-mysql",
 		EnvVars: map[string]string{
 			"MYSQL_ROOT_PASSWORD": uuid.New().String(),
 			"MYSQL_DATABASE":      "guacamole_db",
@@ -102,9 +102,9 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	guacdAlias := uuid.New().String()
 	dbAlias := uuid.New().String()
 	containers["web"] = docker.NewContainer(docker.ContainerConfig{
-		Image: "registry.gitlab.com/haaukins/core-utils/guacamole",
+		Image: "guacamole/guacamole:1.4.0",
 		EnvVars: map[string]string{
-			"MYSQL_DATABASE": "guacamole_db",
+			"MYSQL_DATABASE": "guacamole_db?useSSL=false",
 			"MYSQL_USER":     "guacamole_user",
 			"MYSQL_PASSWORD": mysqlPass,
 			"GUACD_HOSTNAME": guacdAlias,
