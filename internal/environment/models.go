@@ -31,6 +31,7 @@ type Environment struct {
 
 type EnvConfig struct {
 	Tag             string
+	Type            int
 	VPNAddress      string
 	VPNEndpointPort int
 	VpnConfig       wg.WireGuardConfig

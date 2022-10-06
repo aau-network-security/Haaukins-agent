@@ -6,6 +6,7 @@ option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 service Agent {
     rpc Init(InitRequest) returns (StatusResponse) {}
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
+    rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
     rpc LabStream(Empty) returns (stream Lab) {}
 }
 
@@ -20,9 +21,15 @@ message InitRequest {
 
 message CreatEnvRequest {
     string eventTag = 1;
-    repeated VmConfig vms = 2;
-    int32 labAmount = 3;
-    repeated string exercises = 4;
+    int32 envType = 2;
+    repeated VmConfig vms = 3;
+    int32 initialLabs = 4;
+    repeated string exercises = 5;
+}
+
+message CreateLabRequest{
+    string eventTag = 1;
+    bool isVPN = 2;
 }
 
 message VmConfig {

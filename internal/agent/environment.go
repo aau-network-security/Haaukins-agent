@@ -33,8 +33,9 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	// Setting up the env config
 	var envConf env.EnvConfig
 	envConf.Tag = req.EventTag
+	envConf.Type = int(req.EnvType)
 	envConf.WorkerPool = a.workerPool
-
+	log.Debug().Int("envtype", envConf.Type).Msg("making environment with type")
 	// Get exercise info from exercise db
 	var exerConfs []exercise.ExerciseConfig
 	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
@@ -87,7 +88,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 
 	// Create environment
-	env, err := envConf.NewEnv(ctx, a.newLabs, req.LabAmount)
+	env, err := envConf.NewEnv(ctx, a.newLabs, req.InitialLabs)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating environment")
 		return &proto.StatusResponse{Message: "Error creating environment"}, err

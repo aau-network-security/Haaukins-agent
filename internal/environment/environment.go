@@ -17,12 +17,14 @@ import (
 )
 
 var (
-	VPNPortmin = 5000
-	VPNPortmax = 6000
+	VPNPortmin   = 5000
+	VPNPortmax   = 6000
+	BeginnerType = 0 // Starts all labs so they are ready for the event
+	AdvancedType = 1 // Only starts lab dependencies such as guac and VPN
 )
 
 // TODO: Restructure folder structure, to be hierarchical
-func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmount int32) (Environment, error) {
+func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initialLabs int32) (Environment, error) {
 	// Make worker work
 	guac, err := NewGuac(ctx, ec.Tag)
 	if err != nil {
@@ -66,13 +68,13 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 	m := &sync.RWMutex{}
 	// If it is a beginner event, labs will be created and be available beforehand
 	// TODO: add more vms based on amount of users on a team
-	if labAmount > 0 {
-		for i := 0; i < int(labAmount); i++ {
+	if ec.Type == BeginnerType {
+		for i := 0; i < int(initialLabs); i++ {
 			// Adding lab creation task to taskqueue
 			ec.WorkerPool.AddTask(func() {
 				ctx := context.Background()
 				// Creating containers and frontends
-				lab, err := ec.LabConf.NewLab(ctx, false, ec.Tag)
+				lab, err := ec.LabConf.NewLab(ctx, false, BeginnerType, ec.Tag)
 				if err != nil {
 					log.Error().Err(err).Msg("error creating new lab")
 					return

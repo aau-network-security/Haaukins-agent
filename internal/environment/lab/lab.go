@@ -17,9 +17,14 @@ import (
 
 const defaultImageMEMMB = 4096
 
+var (
+	BeginnerType = 0
+	AdvancedType = 1
+)
+
 // TODO Add comments to remaining functions
 // Creates and starts a new virtual lab
-func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab, error) {
+func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType int, eventTag string) (Lab, error) {
 	lab := Lab{
 		ExTags:          make(map[string]*exercise.Exercise),
 		Vlib:            lc.Vlib,
@@ -31,21 +36,28 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab
 		return Lab{}, fmt.Errorf("error creating network for lab: %v", err)
 	}
 
-	// Add exercises to new lab
-	if err := lab.AddExercises(ctx, lc.ExerciseConfs...); err != nil {
-		return Lab{}, fmt.Errorf("error adding exercises to lab: %v", err)
+	// If labtype is beginner lab, ready all exercises from the start
+	if labType == BeginnerType {
+		// Add exercises to new lab
+		if err := lab.AddExercises(ctx, lc.ExerciseConfs...); err != nil {
+			return Lab{}, fmt.Errorf("error adding exercises to lab: %v", err)
+		}
 	}
 
 	lab.DockerHost = docker.NewHost()
-	lab.Frontends = map[uint]FrontendConf{}
+
 	// Generate unique tag for lab
 	lab.Tag = generateTag(eventTag)
 
-	// Configure and add frontends to lab
-	for _, f := range lc.Frontends {
-		port := virtual.GetAvailablePort()
-		if _, err := lab.addFrontend(ctx, f, port); err != nil {
-			return Lab{}, err
+	// If not a VPN lab
+	if !isVPN {
+		// Configure and add frontends to lab
+		lab.Frontends = map[uint]FrontendConf{}
+		for _, f := range lc.Frontends {
+			port := virtual.GetAvailablePort()
+			if _, err := lab.addFrontend(ctx, f, port); err != nil {
+				return Lab{}, err
+			}
 		}
 	}
 
