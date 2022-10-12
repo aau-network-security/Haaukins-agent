@@ -57,7 +57,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		EnvConfig:     *ec,
 		Guac:          guac,
 		IpAddrs:       eventVPNIPs,
-		Labs:          map[string]lab.Lab{},
+		Labs:          map[string]*lab.Lab{},
 		GuacUserStore: NewGuacUserStore(),
 		Wg:            wgClient,
 		Dockerhost:    dockerHost,
@@ -95,7 +95,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 				newLabs <- newLab
 				// Adding lab to environment
 				m.Lock()
-				env.Labs[lab.Tag] = lab
+				env.Labs[lab.Tag] = &lab
 				m.Unlock()
 			})
 		}

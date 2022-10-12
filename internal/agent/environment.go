@@ -98,11 +98,12 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	// Start the environment
 	go env.Start(context.TODO())
 
-	// TODO add env to envpool
+	// TODO add env to envpool, make function?
 	a.State.EnvPool.Em.Lock()
-	a.State.EnvPool.Envs[env.EnvConfig.Tag] = env
+	a.State.EnvPool.Envs[env.EnvConfig.Tag] = &env
 	a.State.EnvPool.Em.Unlock()
 
+	// Just for debugging
 	a.State.EnvPool.Em.RLock()
 	for k, _ := range a.State.EnvPool.Envs {
 		log.Debug().Str("key", k).Msg("envs in env pool")

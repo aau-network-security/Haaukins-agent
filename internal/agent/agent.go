@@ -205,7 +205,7 @@ func New(conf *Config) (*Agent, error) {
 		State: &State{
 			ExClient: exClient,
 			EnvPool: &env.EnvPool{
-				Envs: map[string]env.Environment{},
+				Envs: map[string]*env.Environment{},
 			},
 		},
 	}

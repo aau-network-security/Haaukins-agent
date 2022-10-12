@@ -13,7 +13,7 @@ import (
 // General environment types
 type EnvPool struct {
 	Em   sync.RWMutex
-	Envs map[string]Environment
+	Envs map[string]*Environment
 }
 
 type Environment struct {
@@ -25,7 +25,7 @@ type Environment struct {
 	Wg            wg.WireguardClient
 	GuacUserStore *GuacUserStore
 	Dockerhost    docker.Host
-	Labs          map[string]lab.Lab
+	Labs          map[string]*lab.Lab
 	// Fill out rest when starting to make labs
 }
 

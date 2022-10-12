@@ -20,6 +20,8 @@ func (a *Agent) LabStream(req *proto.Empty, stream proto.Agent_LabStreamServer) 
 	}
 }
 
+// TODO: Rethink func name as this should be the function that configures a lab for a user
+// TODO: Handle assignment (Guac connection and VPN configs here)
 func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest) (*proto.StatusResponse, error) {
 	a.State.EnvPool.Em.RLock()
 	env, ok := a.State.EnvPool.Envs[req.EventTag]
@@ -53,7 +55,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 
 		a.newLabs <- newLab
 		m.Lock()
-		env.Labs[lab.Tag] = lab
+		env.Labs[lab.Tag] = &lab
 		m.Unlock()
 	})
 	return &proto.StatusResponse{Message: "OK"}, nil
