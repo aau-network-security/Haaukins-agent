@@ -11,4 +11,13 @@ docker rm $(docker ps -q -a --filter "label=hkn" --filter status=exited)
 
 docker network prune -f
 
+#Remove wireguard config and interfaces
 
+
+for INTERFACE in $(sudo wg | grep interface: | awk '{print $2}')
+do
+	echo $INTERFACE
+	sudo wg-quick down $INTERFACE
+done
+
+rm -rf /etc/wireguard/*
