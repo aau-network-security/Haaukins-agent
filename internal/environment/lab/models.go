@@ -1,6 +1,8 @@
 package lab
 
 import (
+	"sync"
+
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dhcp"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
@@ -10,6 +12,7 @@ import (
 
 type Lab struct {
 	Tag               string
+	M                 sync.RWMutex
 	Frontends         map[uint]FrontendConf
 	ExTags            map[string]*exercise.Exercise
 	Exercises         []*exercise.Exercise

@@ -22,7 +22,10 @@ var (
 	AdvancedType = 1
 )
 
+// TODO: Make adding lab function to worker a function?
+
 // TODO Add comments to remaining functions
+
 // Creates and starts a new virtual lab
 func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType int, eventTag string) (Lab, error) {
 	lab := Lab{
@@ -65,7 +68,7 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType int, eventTag
 }
 
 func (l *Lab) Start(ctx context.Context) error {
-	if err := l.refreshDNS(ctx); err != nil {
+	if err := l.RefreshDNS(ctx); err != nil {
 		log.Error().Err(err).Msg("error refreshing dns")
 		return err
 	}
@@ -109,7 +112,7 @@ func (l *Lab) Start(ctx context.Context) error {
 	return nil
 }
 
-func (l *Lab) refreshDNS(ctx context.Context) error {
+func (l *Lab) RefreshDNS(ctx context.Context) error {
 
 	if l.DnsServer != nil {
 		if err := l.DnsServer.Close(); err != nil {

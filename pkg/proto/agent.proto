@@ -7,6 +7,7 @@ service Agent {
     rpc Init(InitRequest) returns (StatusResponse) {}
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
+    rpc AddExercisesToLab(AddExerciseRequest) returns (StatusResponse) {}
     rpc LabStream(Empty) returns (stream Lab) {}
 }
 
@@ -30,6 +31,11 @@ message CreatEnvRequest {
 message CreateLabRequest{
     string eventTag = 1;
     bool isVPN = 2;
+}
+
+message AddExerciseRequest {
+    string labTag = 1;
+    repeated string exercises = 2;
 }
 
 message VmConfig {

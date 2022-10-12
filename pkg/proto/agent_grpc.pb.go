@@ -25,6 +25,7 @@ type AgentClient interface {
 	Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	AddExercisesToLab(ctx context.Context, in *AddExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
 }
 
@@ -57,6 +58,15 @@ func (c *agentClient) CreateEnvironment(ctx context.Context, in *CreatEnvRequest
 func (c *agentClient) CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/CreateLabForEnv", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) AddExercisesToLab(ctx context.Context, in *AddExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/AddExercisesToLab", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +112,7 @@ type AgentServer interface {
 	Init(context.Context, *InitRequest) (*StatusResponse, error)
 	CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error)
 	CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error)
+	AddExercisesToLab(context.Context, *AddExerciseRequest) (*StatusResponse, error)
 	LabStream(*Empty, Agent_LabStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
@@ -118,6 +129,9 @@ func (UnimplementedAgentServer) CreateEnvironment(context.Context, *CreatEnvRequ
 }
 func (UnimplementedAgentServer) CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateLabForEnv not implemented")
+}
+func (UnimplementedAgentServer) AddExercisesToLab(context.Context, *AddExerciseRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddExercisesToLab not implemented")
 }
 func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
@@ -189,6 +203,24 @@ func _Agent_CreateLabForEnv_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Agent_AddExercisesToLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).AddExercisesToLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/AddExercisesToLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).AddExercisesToLab(ctx, req.(*AddExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Agent_LabStream_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -228,6 +260,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateLabForEnv",
 			Handler:    _Agent_CreateLabForEnv_Handler,
+		},
+		{
+			MethodName: "AddExercisesToLab",
+			Handler:    _Agent_AddExercisesToLab_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
