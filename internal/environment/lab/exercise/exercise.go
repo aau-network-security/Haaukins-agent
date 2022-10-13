@@ -10,6 +10,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -135,6 +136,7 @@ func (e *Exercise) Start(ctx context.Context) error {
 		go func(m virtual.Instance) {
 			if m.Info().State != virtual.Running {
 				if err := m.Start(ctx); err != nil && res == nil {
+					// TODO https://pkg.go.dev/github.com/hashicorp/go-multierror
 					res = err
 				}
 			}
@@ -144,6 +146,25 @@ func (e *Exercise) Start(ctx context.Context) error {
 	wg.Wait()
 
 	return res
+}
+
+func (e *Exercise) Close() error {
+	var wg sync.WaitGroup
+
+	for _, m := range e.Machines {
+		wg.Add(1)
+		go func(i virtual.Instance) {
+			if err := i.Close(); err != nil {
+				log.Warn().Msgf("error while closing exercise: %s", err)
+			}
+			wg.Done()
+		}(m)
+
+	}
+	wg.Wait()
+
+	e.Machines = nil
+	return nil
 }
 
 func CreateContainer(ctx context.Context, conf docker.ContainerConfig) (docker.Container, error) {

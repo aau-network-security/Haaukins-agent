@@ -3,6 +3,7 @@ package lab
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
@@ -51,6 +52,7 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType int, eventTag
 
 	// Generate unique tag for lab
 	lab.Tag = generateTag(eventTag)
+	lab.Type = labType
 
 	// If not a VPN lab
 	if !isVPN {
@@ -94,6 +96,7 @@ func (l *Lab) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func(e *exercise.Exercise) {
 			if err := e.Start(ctx); err != nil {
+				// TODO: https://pkg.go.dev/github.com/hashicorp/go-multierror
 				res = err
 			}
 			wg.Done()
@@ -108,6 +111,58 @@ func (l *Lab) Start(ctx context.Context) error {
 		if err := fconf.vm.Start(ctx); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (l *Lab) Close() error {
+	var wg sync.WaitGroup
+	for _, lab := range l.Frontends {
+		wg.Add(1)
+		go func(vm vbox.VM) {
+			// closing VMs....
+			defer wg.Done()
+			if err := vm.Close(); err != nil {
+				log.Error().Msgf("Error on Close function in lab.go %s", err)
+			}
+		}(lab.vm)
+	}
+	wg.Add(1)
+	go func() {
+		// closing environment containers...
+		defer wg.Done()
+		// if err := environment.Close(); err != nil {
+		// 	log.Error().Msgf("Error while closing environment containers %s", err)
+		// }
+		var closers []io.Closer
+
+		if l.DhcpServer != nil {
+			closers = append(closers, l.DhcpServer)
+		}
+
+		if l.DnsServer != nil {
+			closers = append(closers, l.DnsServer)
+		}
+
+		for _, e := range l.Exercises {
+			closers = append(closers, e)
+		}
+
+		for _, closer := range closers {
+			wg.Add(1)
+			go func(c io.Closer) {
+				if err := c.Close(); err != nil {
+					log.Error().Err(err).Msg("error while closing lab")
+				}
+				wg.Done()
+			}(closer)
+		}
+
+	}()
+	wg.Wait()
+
+	if err := l.Network.Close(); err != nil {
+		log.Error().Err(err).Msg("error while closing network for lab")
 	}
 	return nil
 }
