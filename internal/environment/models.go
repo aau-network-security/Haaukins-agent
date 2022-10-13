@@ -12,11 +12,12 @@ import (
 
 // General environment types
 type EnvPool struct {
-	Em   sync.RWMutex
+	M    sync.RWMutex
 	Envs map[string]*Environment
 }
 
 type Environment struct {
+	M             sync.RWMutex
 	EnvConfig     EnvConfig
 	Guac          Guacamole
 	IpT           IPTables
