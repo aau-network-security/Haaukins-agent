@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
+	"github.com/aau-network-security/haaukins-agent/internal/environment"
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
@@ -37,13 +39,13 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.WorkerPool = a.workerPool
 	log.Debug().Int("envtype", envConf.Type).Msg("making environment with type")
 	// Get exercise info from exercise db
-	var exerConfs []exercise.ExerciseConfig
+
 	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
 	}
-	//log.Debug().Msgf("challenges: %v", exerDbConfs)
 	// Unpack into exercise slice
+	var exerConfs []exercise.ExerciseConfig
 	for _, e := range exerDbConfs.Exercises {
 		ex, err := protobufToJson(e)
 		if err != nil {
@@ -99,17 +101,70 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	go env.Start(context.TODO())
 
 	// TODO add env to envpool, make function?
-	a.State.EnvPool.Em.Lock()
+	a.State.EnvPool.M.Lock()
 	a.State.EnvPool.Envs[env.EnvConfig.Tag] = &env
-	a.State.EnvPool.Em.Unlock()
+	a.State.EnvPool.M.Unlock()
 
 	// Just for debugging
-	a.State.EnvPool.Em.RLock()
+	a.State.EnvPool.M.RLock()
 	for k, _ := range a.State.EnvPool.Envs {
 		log.Debug().Str("key", k).Msg("envs in env pool")
 	}
-	a.State.EnvPool.Em.RUnlock()
+	a.State.EnvPool.M.RUnlock()
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
+}
+
+// Adds exercises to a beginner environment
+// It appends the new exercise configs to the existing lab config within the environment.
+// This is used for future labs that may start up.
+// Then it adds the exercises to the existing running labs under this environment.
+func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRequest) (*proto.StatusResponse, error) {
+	env, ok := a.State.EnvPool.Envs[req.EnvTag]
+	if !ok {
+		log.Error().Str("envTag", req.EnvTag).Msg("error finding finding environment with tag")
+		return nil, fmt.Errorf("error finding environment with tag: %s", req.EnvTag)
+	}
+
+	if env.EnvConfig.Type == environment.AdvancedType {
+		return nil, errors.New("you cannot add exercises to advanced typed environments... use AddExercisesToLab as users manage their own exercises")
+	}
+
+	env.M.Lock()
+	defer env.M.Unlock()
+
+	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
+	}
+	// Unpack into exercise slice
+	var exerConfs []exercise.ExerciseConfig
+	for _, e := range exerDbConfs.Exercises {
+		ex, err := protobufToJson(e)
+		if err != nil {
+			return nil, err
+		}
+		estruct := exercise.ExerciseConfig{}
+		json.Unmarshal([]byte(ex), &estruct)
+		exerConfs = append(exerConfs, estruct)
+	}
+	env.EnvConfig.LabConf.ExerciseConfs = append(env.EnvConfig.LabConf.ExerciseConfs, exerConfs...)
+
+	var wg sync.WaitGroup
+	ctx = context.Background()
+	for k, _ := range env.Labs {
+		wg.Add(1)
+		l := env.Labs[k]
+		a.workerPool.AddTask(func() {
+			log.Debug().Str("labTag", l.Tag).Msg("adding exercises for lab")
+			if err := l.AddAndStartExercises(ctx, exerConfs...); err != nil {
+				log.Error().Str("labTag", l.Tag).Err(err).Msg("error adding and starting exercises for lab")
+			}
+			wg.Done()
+		})
+	}
+	wg.Wait()
+
+	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
 func getVPNIP() (string, error) {
