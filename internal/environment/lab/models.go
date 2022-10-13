@@ -11,8 +11,9 @@ import (
 )
 
 type Lab struct {
-	Tag               string
 	M                 sync.RWMutex
+	Tag               string
+	Type              int
 	Frontends         map[uint]FrontendConf
 	ExTags            map[string]*exercise.Exercise
 	Exercises         []*exercise.Exercise
