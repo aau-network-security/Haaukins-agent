@@ -76,12 +76,12 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 				// Creating containers and frontends
 				lab, err := ec.LabConf.NewLab(ctx, false, BeginnerType, ec.Tag)
 				if err != nil {
-					log.Error().Err(err).Msg("error creating new lab")
+					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error creating new lab")
 					return
 				}
 				// Starting the created containers and frontends
 				if err := lab.Start(ctx); err != nil {
-					log.Error().Err(err).Msg("error starting new lab")
+					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
 					return
 				}
 				// Sending lab info to daemon
