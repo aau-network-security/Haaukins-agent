@@ -160,6 +160,13 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	return nil
 }
 
+func (guac *Guacamole) Close() error {
+	for _, c := range guac.Containers {
+		c.Close()
+	}
+	return nil
+}
+
 // Configures a guacamole instance for environment.
 // It simply changes the default password
 func (guac *Guacamole) configureInstance() error {

@@ -37,7 +37,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 		return nil, errors.New("environment for event does not exist")
 	}
 
-	if env.EnvConfig.Type == environment.BeginnerType && req.IsVPN {
+	if env.EnvConfig.Type == lab.TypeBeginner && req.IsVPN {
 		return nil, errors.New("cannot create vpn lab for beginner environment")
 	}
 
@@ -46,6 +46,13 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 	m := &sync.RWMutex{}
 	ec.WorkerPool.AddTask(func() {
 		ctx := context.Background()
+
+		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when starting worker")
+		// Make sure that environment is still running before creating lab
+		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
+			log.Info().Msg("environment closed before newlab task was taken from queue, canceling...")
+			return
+		}
 
 		// Creating containers etc.
 		lab, err := ec.LabConf.NewLab(ctx, req.IsVPN, ec.Type, ec.Tag)
@@ -58,6 +65,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
 			return
 		}
+
 		// Sending lab info to daemon
 		newLab := proto.Lab{
 			Tag:      lab.Tag,
@@ -69,6 +77,15 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 		m.Lock()
 		env.Labs[lab.Tag] = &lab
 		m.Unlock()
+		// If lab was created while running CloseEnvironment, close the lab
+		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
+		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
+			log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
+			if err := lab.Close(); err != nil {
+				log.Error().Err(err).Msg("error closing lab")
+				return
+			}
+		}
 	})
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
@@ -107,7 +124,7 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.AddExercisesRe
 		return nil, err
 	}
 
-	if l.Type == lab.BeginnerType {
+	if l.Type == lab.TypeBeginner {
 		return nil, errors.New("cannot add arbitrary exercise to lab of type beginner")
 	}
 
@@ -115,7 +132,7 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.AddExercisesRe
 	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		log.Error().Err(err).Msg("error getting exercise by tags")
-		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
+		return nil, fmt.Errorf("error getting exercises: %s", err)
 	}
 
 	// Unpack into exercise slice
@@ -133,7 +150,7 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.AddExercisesRe
 	ctx = context.Background()
 	if err := l.AddAndStartExercises(ctx, exerConfs...); err != nil {
 		log.Error().Err(err).Msg("error adding and starting exercises")
-		return nil, errors.New(fmt.Sprintf("error adding and starting exercises: %v", err))
+		return nil, fmt.Errorf("error adding and starting exercises: %v", err)
 	}
 
 	// TODO: Need to return host information back to daemon to display to user in case of VPN lab

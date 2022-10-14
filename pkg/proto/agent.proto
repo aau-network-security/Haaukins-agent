@@ -6,6 +6,7 @@ option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 service Agent {
     rpc Init(InitRequest) returns (StatusResponse) {}
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
+    rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
     rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
     rpc AddExercisesToEnv (AddExercisesRequest) returns (StatusResponse) {}
@@ -28,6 +29,10 @@ message CreatEnvRequest {
     repeated VmConfig vms = 3;
     int32 initialLabs = 4;
     repeated string exercises = 5;
+}
+
+message CloseEnvRequest {
+    string eventTag = 1;
 }
 
 message CreateLabRequest{

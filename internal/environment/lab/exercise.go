@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
@@ -80,8 +81,7 @@ func (l *Lab) AddAndStartExercises(ctx context.Context, exerConfs ...exercise.Ex
 		wg.Add(1)
 		go func(e *exercise.Exercise) {
 			if err := e.Start(ctx); err != nil {
-				// TODO: https://pkg.go.dev/github.com/hashicorp/go-multierror
-				res = err
+				res = multierror.Append(res, err)
 			}
 			wg.Done()
 		}(ex)

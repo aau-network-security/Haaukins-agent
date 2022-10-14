@@ -13,23 +13,40 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
 const defaultImageMEMMB = 4096
 
-var (
-	BeginnerType = 0
-	AdvancedType = 1
+type LabType uint8
+
+const (
+	// LabType
+	TypeBeginner LabType = iota
+	TypeAdvanced
 )
+
+func (lType LabType) String() string {
+	switch lType {
+	case TypeBeginner:
+		return "beginner"
+	case TypeAdvanced:
+		return "advanced"
+	}
+
+	log.Error().Msg("type did not match any existing labType")
+	return ""
+}
 
 // TODO: Make adding lab function to worker a function?
 
 // TODO Add comments to remaining functions
 
 // Creates and starts a new virtual lab
-func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType int, eventTag string) (Lab, error) {
+func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType LabType, eventTag string) (Lab, error) {
 	lab := Lab{
+		M:               &sync.RWMutex{},
 		ExTags:          make(map[string]*exercise.Exercise),
 		Vlib:            lc.Vlib,
 		ExerciseConfigs: lc.ExerciseConfs,
@@ -41,7 +58,7 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType int, eventTag
 	}
 
 	// If labtype is beginner lab, ready all exercises from the start
-	if labType == BeginnerType {
+	if labType == TypeBeginner {
 		// Add exercises to new lab
 		if err := lab.AddExercises(ctx, lc.ExerciseConfs...); err != nil {
 			return Lab{}, fmt.Errorf("error adding exercises to lab: %v", err)
@@ -96,8 +113,7 @@ func (l *Lab) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func(e *exercise.Exercise) {
 			if err := e.Start(ctx); err != nil {
-				// TODO: https://pkg.go.dev/github.com/hashicorp/go-multierror
-				res = err
+				res = multierror.Append(res, err)
 			}
 			wg.Done()
 		}(ex)

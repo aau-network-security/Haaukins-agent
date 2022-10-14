@@ -180,7 +180,7 @@ func New(conf *Config) (*Agent, error) {
 	} else {
 		exClient, err = NewExerciseClientConn(conf.ExerciseService)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
+			return nil, fmt.Errorf("error connecting to exercise service: %s", err)
 		}
 	}
 
@@ -205,7 +205,8 @@ func New(conf *Config) (*Agent, error) {
 		State: &State{
 			ExClient: exClient,
 			EnvPool: &env.EnvPool{
-				Envs: map[string]*env.Environment{},
+				M:    &sync.RWMutex{},
+				Envs: make(map[string]*env.Environment),
 			},
 		},
 	}
@@ -249,7 +250,7 @@ func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.Status
 	exClient, err := NewExerciseClientConn(exConf)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to exercise service")
-		return nil, errors.New(fmt.Sprintf("error connecting to exercise service: %s", err))
+		return nil, fmt.Errorf("error connecting to exercise service: %s", err)
 	}
 
 	// Saving the config in the agent config
@@ -259,24 +260,24 @@ func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.Status
 	data, err := yaml.Marshal(a.config)
 	if err != nil {
 		log.Error().Err(err).Msg("error marshalling yaml")
-		return nil, errors.New(fmt.Sprintf("error marshalling yaml: %s", err))
+		return nil, fmt.Errorf("error marshalling yaml: %s", err)
 	}
 
 	// Truncates existing file to overwrite with new data
 	f, err := os.Create(configPath)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating or truncating config file")
-		return nil, errors.New(fmt.Sprintf("error creating or truncating config file: %s", err))
+		return nil, fmt.Errorf("error creating or truncating config file: %s", err)
 	}
 
 	if err := f.Chmod(0600); err != nil {
 		log.Error().Err(err).Msg("error changing file perms")
-		return nil, errors.New(fmt.Sprintf("error changing file perms: %s", err))
+		return nil, fmt.Errorf("error changing file perms: %s", err)
 	}
 
 	if _, err := f.Write(data); err != nil {
 		log.Error().Err(err).Msg("error writing config to file")
-		return nil, errors.New(fmt.Sprintf("error writing config to file: %s", err))
+		return nil, fmt.Errorf("error writing config to file: %s", err)
 	}
 	a.initialized = true
 	a.State.ExClient = exClient

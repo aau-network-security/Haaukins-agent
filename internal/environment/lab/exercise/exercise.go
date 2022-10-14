@@ -10,6 +10,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
@@ -136,8 +137,7 @@ func (e *Exercise) Start(ctx context.Context) error {
 		go func(m virtual.Instance) {
 			if m.Info().State != virtual.Running {
 				if err := m.Start(ctx); err != nil && res == nil {
-					// TODO https://pkg.go.dev/github.com/hashicorp/go-multierror
-					res = err
+					res = multierror.Append(res, err)
 				}
 			}
 			wg.Done()

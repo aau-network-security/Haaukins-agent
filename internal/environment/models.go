@@ -12,13 +12,13 @@ import (
 
 // General environment types
 type EnvPool struct {
-	M    sync.RWMutex
+	M    *sync.RWMutex
 	Envs map[string]*Environment
 }
 
 type Environment struct {
-	M             sync.RWMutex
-	EnvConfig     EnvConfig
+	M             *sync.RWMutex
+	EnvConfig     *EnvConfig
 	Guac          Guacamole
 	IpT           IPTables
 	IpRules       map[string]IpRules
@@ -30,14 +30,24 @@ type Environment struct {
 	// Fill out rest when starting to make labs
 }
 
+type status uint8
+
+const (
+	StatusRunning status = iota
+	StatusUpdating
+	StatusClosing
+	StatusClosed
+)
+
 type EnvConfig struct {
 	Tag             string
-	Type            int
+	Type            lab.LabType
 	VPNAddress      string
 	VPNEndpointPort int
 	VpnConfig       wg.WireGuardConfig
 	WorkerPool      worker.WorkerPool
 	LabConf         lab.LabConf
+	Status          status
 }
 
 type Category struct {

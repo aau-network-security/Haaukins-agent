@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment"
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
@@ -35,14 +37,14 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	// Setting up the env config
 	var envConf env.EnvConfig
 	envConf.Tag = req.EventTag
-	envConf.Type = int(req.EnvType)
+	envConf.Type = lab.LabType(req.EnvType)
 	envConf.WorkerPool = a.workerPool
-	log.Debug().Int("envtype", envConf.Type).Msg("making environment with type")
+	log.Debug().Int("envtype", int(envConf.Type)).Msg("making environment with type")
 	// Get exercise info from exercise db
 
 	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
+		return nil, fmt.Errorf("error getting exercises: %s", err)
 	}
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
@@ -101,17 +103,40 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	go env.Start(context.TODO())
 
 	// TODO add env to envpool, make function?
-	a.State.EnvPool.M.Lock()
-	a.State.EnvPool.Envs[env.EnvConfig.Tag] = &env
-	a.State.EnvPool.M.Unlock()
+	a.State.EnvPool.AddEnv(&env)
 
-	// Just for debugging
-	a.State.EnvPool.M.RLock()
-	for k, _ := range a.State.EnvPool.Envs {
-		log.Debug().Str("key", k).Msg("envs in env pool")
-	}
-	a.State.EnvPool.M.RUnlock()
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
+}
+
+// Closes environment and attached containers/vms, and removes the environment from the event pool
+func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest) (*proto.StatusResponse, error) {
+	env, err := a.State.EnvPool.GetEnv(req.EventTag)
+	if err != nil {
+		log.Error().Str("envTag", req.EventTag).Msg("error finding finding environment with tag")
+		return nil, fmt.Errorf("error finding environment with tag: %s", req.EventTag)
+	}
+
+	env.EnvConfig.Status = environment.StatusClosing
+
+	envConf := env.EnvConfig
+
+	vpnIP := strings.ReplaceAll(envConf.VPNAddress, ".240.1/22", "")
+	vpnIPPool.ReleaseIP(vpnIP)
+
+	if err := vbox.RemoveEventFolder(string(envConf.Tag)); err != nil {
+		//do nothing
+	}
+
+	if err := env.Close(); err != nil {
+		log.Error().Err(err).Msg("error closing environment")
+		return nil, fmt.Errorf("error closing environment %v", err)
+	}
+
+	env.EnvConfig.Status = environment.StatusClosed
+
+	a.State.EnvPool.RemoveEnv(envConf.Tag)
+
+	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
 // Adds exercises to a beginner environment
@@ -125,7 +150,7 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRe
 		return nil, fmt.Errorf("error finding environment with tag: %s", req.EnvTag)
 	}
 
-	if env.EnvConfig.Type == environment.AdvancedType {
+	if env.EnvConfig.Type == lab.TypeAdvanced {
 		return nil, errors.New("you cannot add exercises to advanced typed environments... use AddExercisesToLab as users manage their own exercises")
 	}
 
@@ -134,7 +159,7 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRe
 
 	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error getting exercises: %s", err))
+		return nil, fmt.Errorf("error getting exercises: %s", err)
 	}
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
@@ -151,7 +176,7 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRe
 
 	var wg sync.WaitGroup
 	ctx = context.Background()
-	for k, _ := range env.Labs {
+	for k := range env.Labs {
 		wg.Add(1)
 		l := env.Labs[k]
 		a.workerPool.AddTask(func() {

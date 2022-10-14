@@ -608,7 +608,7 @@ func (n *network) Interface() string {
 }
 
 func (n *network) getRandomIP() int {
-	for randDigit, _ := range n.ipPool {
+	for randDigit := range n.ipPool {
 		delete(n.ipPool, randDigit)
 		return int(randDigit)
 	}
@@ -903,7 +903,7 @@ func parseImage(img string) Image {
 		parts = strings.Split(repo, "/")
 
 		registry = parts[0]
-		repo = strings.Join(parts[1:len(parts)], "/")
+		repo = strings.Join(parts[1:], "/")
 	}
 
 	return Image{
