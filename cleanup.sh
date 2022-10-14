@@ -1,6 +1,12 @@
 #! /bin/bash
 
-# Killing containers which has label of "hkn"
+#Killing containers which has label of "hkn"
+
+#for CONTAINER in $(docker ps -q --filter "label=hkn")
+#do
+#	docker kill $CONTAINER
+#	docker rm $CONTAINER
+#done
 
 docker kill $(docker ps -q --filter "label=hkn")
 #time docker ps --no-trunc --filter "label=hkn" --format '{{.ID}}' | xargs -n 1 docker inspect --format '{{.State.Pid}}' $1 | xargs -n 1 sudo kill -9
@@ -21,3 +27,5 @@ do
 done
 
 rm -rf /etc/wireguard/*
+
+rm -rf filetransfer/*
