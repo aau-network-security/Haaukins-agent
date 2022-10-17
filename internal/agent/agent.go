@@ -201,7 +201,7 @@ func New(conf *Config) (*Agent, error) {
 		workerPool: workerPool,
 		vlib:       vbox.NewLibrary(conf.OvaDir),
 		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs:    make(chan pb.Lab, 10),
+		newLabs:    make(chan pb.Lab, 100),
 		State: &State{
 			ExClient: exClient,
 			EnvPool: &env.EnvPool{

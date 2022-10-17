@@ -93,6 +93,16 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 					return
 				}
 
+				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
+				// If lab was created while running CloseEnvironment, close the lab
+				if ec.Status == StatusClosing || ec.Status == StatusClosed {
+					log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
+					if err := lab.Close(); err != nil {
+						log.Error().Err(err).Msg("error closing lab")
+						return
+					}
+					return
+				}
 				// Sending lab info to daemon
 				// TODO Figure out what exact data should be returned to daemon
 				// TODO use new getChallenges function to get challenges for lab to return flag etc.
@@ -107,15 +117,6 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 				env.Labs[lab.Tag] = &lab
 				m.Unlock()
 
-				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
-				// If lab was created while running CloseEnvironment, close the lab
-				if ec.Status == StatusClosing || ec.Status == StatusClosed {
-					log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
-					if err := lab.Close(); err != nil {
-						log.Error().Err(err).Msg("error closing lab")
-						return
-					}
-				}
 			})
 		}
 	}

@@ -66,6 +66,16 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			return
 		}
 
+		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
+		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
+			log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
+			if err := lab.Close(); err != nil {
+				log.Error().Err(err).Msg("error closing lab")
+				return
+			}
+			return
+		}
+
 		// Sending lab info to daemon
 		newLab := proto.Lab{
 			Tag:      lab.Tag,
@@ -78,14 +88,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 		env.Labs[lab.Tag] = &lab
 		m.Unlock()
 		// If lab was created while running CloseEnvironment, close the lab
-		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
-		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
-			log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
-			if err := lab.Close(); err != nil {
-				log.Error().Err(err).Msg("error closing lab")
-				return
-			}
-		}
+
 	})
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
