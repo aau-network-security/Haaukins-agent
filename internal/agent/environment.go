@@ -39,7 +39,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.Tag = req.EventTag
 	envConf.Type = lab.LabType(req.EnvType)
 	envConf.WorkerPool = a.workerPool
-	log.Debug().Int("envtype", int(envConf.Type)).Msg("making environment with type")
+	log.Debug().Str("envtype", envConf.Type.String()).Msg("making environment with type")
 	// Get exercise info from exercise db
 
 	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
