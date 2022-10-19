@@ -24,6 +24,11 @@ const _ = grpc.SupportPackageIsVersion7
 type AgentClient interface {
 	Init(ctx context.Context, in *InitRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	CloseEnvironment(ctx context.Context, in *CloseEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	CloseLab(ctx context.Context, in *CloseLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	AddExercisesToEnv(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	AddExercisesToLab(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
 }
 
@@ -47,6 +52,51 @@ func (c *agentClient) Init(ctx context.Context, in *InitRequest, opts ...grpc.Ca
 func (c *agentClient) CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/CreateEnvironment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) CloseEnvironment(ctx context.Context, in *CloseEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/CloseEnvironment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/CreateLabForEnv", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) CloseLab(ctx context.Context, in *CloseLabRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/CloseLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) AddExercisesToEnv(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/AddExercisesToEnv", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) AddExercisesToLab(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/AddExercisesToLab", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +141,11 @@ func (x *agentLabStreamClient) Recv() (*Lab, error) {
 type AgentServer interface {
 	Init(context.Context, *InitRequest) (*StatusResponse, error)
 	CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error)
+	CloseEnvironment(context.Context, *CloseEnvRequest) (*StatusResponse, error)
+	CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error)
+	CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error)
+	AddExercisesToEnv(context.Context, *AddExercisesRequest) (*StatusResponse, error)
+	AddExercisesToLab(context.Context, *AddExercisesRequest) (*StatusResponse, error)
 	LabStream(*Empty, Agent_LabStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
@@ -104,6 +159,21 @@ func (UnimplementedAgentServer) Init(context.Context, *InitRequest) (*StatusResp
 }
 func (UnimplementedAgentServer) CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateEnvironment not implemented")
+}
+func (UnimplementedAgentServer) CloseEnvironment(context.Context, *CloseEnvRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseEnvironment not implemented")
+}
+func (UnimplementedAgentServer) CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateLabForEnv not implemented")
+}
+func (UnimplementedAgentServer) CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseLab not implemented")
+}
+func (UnimplementedAgentServer) AddExercisesToEnv(context.Context, *AddExercisesRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddExercisesToEnv not implemented")
+}
+func (UnimplementedAgentServer) AddExercisesToLab(context.Context, *AddExercisesRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddExercisesToLab not implemented")
 }
 func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
@@ -157,6 +227,96 @@ func _Agent_CreateEnvironment_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Agent_CloseEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseEnvRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).CloseEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/CloseEnvironment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).CloseEnvironment(ctx, req.(*CloseEnvRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_CreateLabForEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateLabRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).CreateLabForEnv(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/CreateLabForEnv",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).CreateLabForEnv(ctx, req.(*CreateLabRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_CloseLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseLabRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).CloseLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/CloseLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).CloseLab(ctx, req.(*CloseLabRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_AddExercisesToEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddExercisesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).AddExercisesToEnv(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/AddExercisesToEnv",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).AddExercisesToEnv(ctx, req.(*AddExercisesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_AddExercisesToLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddExercisesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).AddExercisesToLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/AddExercisesToLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).AddExercisesToLab(ctx, req.(*AddExercisesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Agent_LabStream_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -192,6 +352,26 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateEnvironment",
 			Handler:    _Agent_CreateEnvironment_Handler,
+		},
+		{
+			MethodName: "CloseEnvironment",
+			Handler:    _Agent_CloseEnvironment_Handler,
+		},
+		{
+			MethodName: "CreateLabForEnv",
+			Handler:    _Agent_CreateLabForEnv_Handler,
+		},
+		{
+			MethodName: "CloseLab",
+			Handler:    _Agent_CloseLab_Handler,
+		},
+		{
+			MethodName: "AddExercisesToEnv",
+			Handler:    _Agent_AddExercisesToEnv_Handler,
+		},
+		{
+			MethodName: "AddExercisesToLab",
+			Handler:    _Agent_AddExercisesToLab_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

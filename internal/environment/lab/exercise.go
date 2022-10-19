@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/hashicorp/go-multierror"
+	"github.com/rs/zerolog/log"
 )
-// TODO add comments 
+
+// AddExercises uses exercise configs from the exercise service to configure containers and flags to be started at a later time
 func (l *Lab) AddExercises(ctx context.Context, confs ...exercise.ExerciseConfig) error {
 	var e *exercise.Exercise
 	var aRecord string
@@ -50,6 +54,42 @@ func (l *Lab) AddExercises(ctx context.Context, confs ...exercise.ExerciseConfig
 		l.Exercises = append(l.Exercises, e)
 	}
 
+	return nil
+}
+
+// Used to add exercises to an already running lab.
+// It configures the containers, refreshes the DNS to add the new records and then starts the new exercise containers
+func (l *Lab) AddAndStartExercises(ctx context.Context, exerConfs ...exercise.ExerciseConfig) error {
+	l.M.Lock()
+	defer l.M.Unlock()
+
+	if err := l.AddExercises(ctx, exerConfs...); err != nil {
+		log.Error().Err(err).Msg("error adding exercise to lab")
+		return err
+	}
+
+	// Refresh the DNS
+	if err := l.RefreshDNS(ctx); err != nil {
+		log.Error().Err(err).Msg("error refreshing DNS")
+		return err
+	}
+
+	// Start the exercises
+	var res error
+	var wg sync.WaitGroup
+	for _, ex := range l.Exercises {
+		wg.Add(1)
+		go func(e *exercise.Exercise) {
+			if err := e.Start(ctx); err != nil {
+				res = multierror.Append(res, err)
+			}
+			wg.Done()
+		}(ex)
+	}
+	wg.Wait()
+	if res != nil {
+		return res
+	}
 	return nil
 }
 

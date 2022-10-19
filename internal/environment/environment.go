@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -21,19 +24,18 @@ var (
 	VPNPortmax = 6000
 )
 
-// TODO: Restructure folder structure, to be hierarchical
-func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmount int32) (*Environment, error) {
+func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initialLabs int32) (Environment, error) {
 	// Make worker work
 	guac, err := NewGuac(ctx, ec.Tag)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating new guacamole")
-		return nil, err
+		return Environment{}, err
 	}
 	// Getting wireguard client from config
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
-		return nil, err
+		return Environment{}, err
 	}
 
 	ipT := IPTables{
@@ -51,10 +53,12 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 		eventVPNIPs = append(eventVPNIPs, ipAddrs...)
 	}
 
-	env := &Environment{
+	env := Environment{
+		M:             &sync.RWMutex{},
+		EnvConfig:     ec,
 		Guac:          guac,
 		IpAddrs:       eventVPNIPs,
-		Labs:          map[string]lab.Lab{},
+		Labs:          map[string]*lab.Lab{},
 		GuacUserStore: NewGuacUserStore(),
 		Wg:            wgClient,
 		Dockerhost:    dockerHost,
@@ -62,30 +66,45 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 		IpRules:       map[string]IpRules{},
 	}
 
-	env.Labs = make(map[string]lab.Lab)
 	m := &sync.RWMutex{}
 	// If it is a beginner event, labs will be created and be available beforehand
 	// TODO: add more vms based on amount of users on a team
-	if labAmount > 0 {
-		for i := 0; i < int(labAmount); i++ {
+	if ec.Type == lab.TypeBeginner {
+		for i := 0; i < int(initialLabs); i++ {
 			// Adding lab creation task to taskqueue
 			ec.WorkerPool.AddTask(func() {
 				ctx := context.Background()
+				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when starting worker")
+				// Make sure that environment is still running before creating lab
+				if ec.Status == StatusClosing || ec.Status == StatusClosed {
+					log.Info().Msg("environment closed before newlab task was taken from queue, canceling...")
+					return
+				}
 				// Creating containers and frontends
-				lab, err := ec.LabConf.NewLab(ctx, false, ec.Tag)
+				lab, err := ec.LabConf.NewLab(ctx, false, lab.TypeBeginner, ec.Tag)
 				if err != nil {
-					log.Error().Err(err).Msg("error creating new lab")
+					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error creating new lab")
 					return
 				}
 				// Starting the created containers and frontends
 				if err := lab.Start(ctx); err != nil {
-					log.Error().Err(err).Msg("error starting new lab")
+					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
+					return
+				}
+
+				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
+				// If lab was created while running CloseEnvironment, close the lab
+				if ec.Status == StatusClosing || ec.Status == StatusClosed {
+					log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
+					if err := lab.Close(); err != nil {
+						log.Error().Err(err).Msg("error closing lab")
+						return
+					}
 					return
 				}
 				// Sending lab info to daemon
 				// TODO Figure out what exact data should be returned to daemon
 				// TODO use new getChallenges function to get challenges for lab to return flag etc.
-				log.Debug().Msgf("%v", lab.Exercises)
 				newLab := proto.Lab{
 					Tag:      lab.Tag,
 					EventTag: ec.Tag,
@@ -94,8 +113,9 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, labAmou
 				newLabs <- newLab
 				// Adding lab to environment
 				m.Lock()
-				env.Labs[lab.Tag] = lab
+				env.Labs[lab.Tag] = &lab
 				m.Unlock()
+
 			})
 		}
 	}
@@ -135,13 +155,79 @@ func (env *Environment) Start(ctx context.Context) error {
 		// TODO If vpn is for some reason not initialized, it should be possible to try to reininialize for this specific agent and environment
 		log.Error().Err(err).Msg("error initializing vpn endpoint... \n continueing wihout, reininialize from admin webclient")
 	}
-	
+
 	// Start the guac containers
 	if err := env.Guac.Start(ctx); err != nil {
 		log.Error().Err(err).Msg("error starting guac")
 		return errors.New("error while starting guac")
 	}
+
+	env.EnvConfig.Status = StatusRunning
 	return nil
+}
+
+// Closes environment including removing all related containers, and vpn configs
+func (env *Environment) Close() error {
+	env.M.Lock()
+	defer env.M.Unlock()
+
+	env.Guac.Close()
+
+	var wg sync.WaitGroup
+	for _, l := range env.Labs {
+		wg.Add(1)
+		go func(c io.Closer) {
+			if err := c.Close(); err != nil {
+				log.Warn().Msgf("error while closing event '%s': %s", env.EnvConfig.Tag, err)
+			}
+			defer wg.Done()
+		}(l)
+	}
+
+	env.removeVPNConfs()
+	env.removeIPTableRules()
+	return nil
+}
+
+func (env *Environment) removeIPTableRules() {
+	for tid, ipR := range env.IpRules {
+		log.Debug().Str("Team ID ", tid).Msgf("iptables are removing... ")
+		env.IpT.removeRejectRule(ipR.Labsubnet)
+		env.IpT.removeStateRule(ipR.Labsubnet)
+		env.IpT.removeAcceptRule(ipR.Labsubnet, ipR.VpnIps)
+	}
+}
+
+func (env *Environment) removeVPNConfs() {
+	envTag := env.EnvConfig.Tag
+	log.Debug().Msgf("Closing VPN connection for event %s", envTag)
+
+	resp, err := env.Wg.ManageNIC(context.Background(), &wg.ManageNICReq{Cmd: "down", Nic: envTag})
+	if err != nil {
+		log.Error().Msgf("Error when disabling VPN connection for event %s", envTag)
+
+	}
+	if resp != nil {
+		log.Info().Str("Message", resp.Message).Msgf("VPN connection is closed for event %s ", envTag)
+	}
+	//removeVPNConfigs removes all generated config files when Haaukins is stopped
+	if err := removeVPNConfigs(env.EnvConfig.VpnConfig.Dir + "/" + envTag + "*"); err != nil {
+		log.Error().Msgf("Error happened on deleting VPN configuration files for event %s on host  %v", envTag, err)
+	}
+}
+
+func removeVPNConfigs(confFile string) error {
+	log.Info().Msgf("Cleaning up VPN configuration files with following pattern { %s }", confFile)
+	files, err := filepath.Glob(confFile)
+	if err != nil {
+		panic(err)
+	}
+	for _, f := range files {
+		if err := os.Remove(f); err != nil {
+			log.Error().Msgf("Error removing file with name %s", f)
+		}
+	}
+	return err
 }
 
 func makeRange(min, max int) []int {
