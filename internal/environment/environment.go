@@ -24,7 +24,6 @@ var (
 	VPNPortmax = 6000
 )
 
-// TODO: Restructure folder structure, to be hierarchical
 func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initialLabs int32) (Environment, error) {
 	// Make worker work
 	guac, err := NewGuac(ctx, ec.Tag)

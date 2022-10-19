@@ -58,7 +58,6 @@ func NewGuac(ctx context.Context, eventTag string) (Guacamole, error) {
 		return Guacamole{}, err
 	}
 	return guac, nil
-	// TODO finish newGuac function
 }
 
 /*
@@ -83,7 +82,6 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 		},
 		User: user,
 	})
-	// TODO: push to gitlab
 	mysqlPass := uuid.New().String()
 	containers["db"] = docker.NewContainer(docker.ContainerConfig{
 		Image: "registry.gitlab.com/haaukins/core-utils/guacamole:mysql",

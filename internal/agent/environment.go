@@ -102,7 +102,6 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	// Start the environment
 	go env.Start(context.TODO())
 
-	// TODO add env to envpool, make function?
 	a.State.EnvPool.AddEnv(&env)
 
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil

@@ -21,7 +21,6 @@ type Exercise struct {
 	Machines []virtual.Instance
 }
 
-// TODO maybe move this to a new package as well
 //todo manage the status somehow
 type ExerciseConfig struct {
 	Tag      string `json:"tag,omitempty"`

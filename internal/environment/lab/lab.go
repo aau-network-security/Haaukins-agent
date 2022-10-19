@@ -39,7 +39,7 @@ func (lType LabType) String() string {
 	return ""
 }
 
-// TODO: Make adding lab function to worker a function?
+
 
 // TODO Add comments to remaining functions
 

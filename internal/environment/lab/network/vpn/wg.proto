@@ -1,7 +1,5 @@
 syntax="proto3";
 
-// todo: GenInterface
-
 service Wireguard {
 
     rpc InitializeI(IReq) returns (IResp) {}
