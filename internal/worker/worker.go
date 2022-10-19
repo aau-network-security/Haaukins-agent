@@ -14,7 +14,7 @@ type workerPool struct {
 }
 
 func NewWorkerPool(maxWorkers int) WorkerPool {
-	queuedTasks := make(chan func())
+	queuedTasks := make(chan func(), 200)
 	return &workerPool{
 		maxWorkers:  maxWorkers,
 		queuedTasks: queuedTasks,

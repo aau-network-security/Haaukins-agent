@@ -3,6 +3,7 @@ package lab
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
@@ -12,15 +13,40 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
 const defaultImageMEMMB = 4096
 
+type LabType uint8
+
+const (
+	// LabType
+	TypeBeginner LabType = iota
+	TypeAdvanced
+)
+
+func (lType LabType) String() string {
+	switch lType {
+	case TypeBeginner:
+		return "beginner"
+	case TypeAdvanced:
+		return "advanced"
+	}
+
+	log.Error().Msg("type did not match any existing labType")
+	return ""
+}
+
+// TODO: Make adding lab function to worker a function?
+
 // TODO Add comments to remaining functions
+
 // Creates and starts a new virtual lab
-func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab, error) {
+func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType LabType, eventTag string) (Lab, error) {
 	lab := Lab{
+		M:               &sync.RWMutex{},
 		ExTags:          make(map[string]*exercise.Exercise),
 		Vlib:            lc.Vlib,
 		ExerciseConfigs: lc.ExerciseConfs,
@@ -31,21 +57,29 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab
 		return Lab{}, fmt.Errorf("error creating network for lab: %v", err)
 	}
 
-	// Add exercises to new lab
-	if err := lab.AddExercises(ctx, lc.ExerciseConfs...); err != nil {
-		return Lab{}, fmt.Errorf("error adding exercises to lab: %v", err)
+	// If labtype is beginner lab, ready all exercises from the start
+	if labType == TypeBeginner {
+		// Add exercises to new lab
+		if err := lab.AddExercises(ctx, lc.ExerciseConfs...); err != nil {
+			return Lab{}, fmt.Errorf("error adding exercises to lab: %v", err)
+		}
 	}
 
 	lab.DockerHost = docker.NewHost()
-	lab.Frontends = map[uint]FrontendConf{}
+
 	// Generate unique tag for lab
 	lab.Tag = generateTag(eventTag)
+	lab.Type = labType
 
-	// Configure and add frontends to lab
-	for _, f := range lc.Frontends {
-		port := virtual.GetAvailablePort()
-		if _, err := lab.addFrontend(ctx, f, port); err != nil {
-			return Lab{}, err
+	// If not a VPN lab
+	if !isVPN {
+		// Configure and add frontends to lab
+		lab.Frontends = map[uint]FrontendConf{}
+		for _, f := range lc.Frontends {
+			port := virtual.GetAvailablePort()
+			if _, err := lab.addFrontend(ctx, f, port); err != nil {
+				return Lab{}, err
+			}
 		}
 	}
 
@@ -53,7 +87,7 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, eventTag string) (Lab
 }
 
 func (l *Lab) Start(ctx context.Context) error {
-	if err := l.refreshDNS(ctx); err != nil {
+	if err := l.RefreshDNS(ctx); err != nil {
 		log.Error().Err(err).Msg("error refreshing dns")
 		return err
 	}
@@ -79,7 +113,7 @@ func (l *Lab) Start(ctx context.Context) error {
 		wg.Add(1)
 		go func(e *exercise.Exercise) {
 			if err := e.Start(ctx); err != nil {
-				res = err
+				res = multierror.Append(res, err)
 			}
 			wg.Done()
 		}(ex)
@@ -97,7 +131,59 @@ func (l *Lab) Start(ctx context.Context) error {
 	return nil
 }
 
-func (l *Lab) refreshDNS(ctx context.Context) error {
+func (l *Lab) Close() error {
+	var wg sync.WaitGroup
+	for _, lab := range l.Frontends {
+		wg.Add(1)
+		go func(vm vbox.VM) {
+			// closing VMs....
+			defer wg.Done()
+			if err := vm.Close(); err != nil {
+				log.Error().Msgf("Error on Close function in lab.go %s", err)
+			}
+		}(lab.vm)
+	}
+	wg.Add(1)
+	go func() {
+		// closing environment containers...
+		defer wg.Done()
+		// if err := environment.Close(); err != nil {
+		// 	log.Error().Msgf("Error while closing environment containers %s", err)
+		// }
+		var closers []io.Closer
+
+		if l.DhcpServer != nil {
+			closers = append(closers, l.DhcpServer)
+		}
+
+		if l.DnsServer != nil {
+			closers = append(closers, l.DnsServer)
+		}
+
+		for _, e := range l.Exercises {
+			closers = append(closers, e)
+		}
+
+		for _, closer := range closers {
+			wg.Add(1)
+			go func(c io.Closer) {
+				if err := c.Close(); err != nil {
+					log.Error().Err(err).Msg("error while closing lab")
+				}
+				wg.Done()
+			}(closer)
+		}
+
+	}()
+	wg.Wait()
+
+	if err := l.Network.Close(); err != nil {
+		log.Error().Err(err).Msg("error while closing network for lab")
+	}
+	return nil
+}
+
+func (l *Lab) RefreshDNS(ctx context.Context) error {
 
 	if l.DnsServer != nil {
 		if err := l.DnsServer.Close(); err != nil {
