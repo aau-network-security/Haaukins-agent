@@ -86,7 +86,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	// TODO: push to gitlab
 	mysqlPass := uuid.New().String()
 	containers["db"] = docker.NewContainer(docker.ContainerConfig{
-		Image: "guacamole-mysql", //Image: "aaunetworksecurity/guacamole-mysql",
+		Image: "registry.gitlab.com/haaukins/core-utils/guacamole:mysql",
 		EnvVars: map[string]string{
 			"MYSQL_ROOT_PASSWORD": uuid.New().String(),
 			"MYSQL_DATABASE":      "guacamole_db",
