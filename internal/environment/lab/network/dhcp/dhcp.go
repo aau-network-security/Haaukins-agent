@@ -20,6 +20,7 @@ type Server struct {
 	dns      string
 	subnet   string
 }
+
 // TODO add comments
 func New(format func(n int) string) (*Server, error) {
 	f, err := ioutil.TempFile("", "dhcpd-conf")
@@ -30,6 +31,7 @@ func New(format func(n int) string) (*Server, error) {
 
 	subnet := format(0)
 	dns := format(dns.PreferedIP)
+	// TODO: Test how resetting could affect docker IPs
 	minRange := format(4)
 	maxRange := format(254)
 	broadcast := format(255)

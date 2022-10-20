@@ -148,6 +148,31 @@ func (e *Exercise) Start(ctx context.Context) error {
 	return res
 }
 
+func (e *Exercise) Stop(ctx context.Context) error {
+	for _, m := range e.Machines {
+		if err := m.Stop(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *Exercise) Reset(ctx context.Context) error {
+	if err := e.Close(); err != nil {
+		return err
+	}
+
+	if err := e.Create(ctx); err != nil {
+		return err
+	}
+
+	if err := e.Start(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (e *Exercise) Close() error {
 	var wg sync.WaitGroup
 

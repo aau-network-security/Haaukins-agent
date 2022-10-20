@@ -120,7 +120,7 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 // GRPc endpoint that adds exercises to an already running lab. It requires the lab tag, and an array of exercise tags.
 // It starts by creating the containers needed for the exercise, then it refreshes the DNS and starts the containers afterwards.
 // It utilizes a mutex lock to make sure that if anyone tries to run the same GRPc call twice without the first being finished, the second one will wait
-func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.AddExercisesRequest) (*proto.StatusResponse, error) {
+func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
 	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
 		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
@@ -157,5 +157,50 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.AddExercisesRe
 	}
 
 	// TODO: Need to return host information back to daemon to display to user in case of VPN lab
+	return &proto.StatusResponse{Message: "OK"}, nil
+}
+
+// Starts a suspended/stopped exercise
+func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
+	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	ctx = context.Background()
+	if err := l.StartExercise(ctx, req.Exercise); err != nil {
+		return nil, err
+	}
+	return &proto.StatusResponse{Message: "OK"}, nil
+}
+
+// Stops a running exercise
+func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
+	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	ctx = context.Background()
+	if err := l.StopExercise(ctx, req.Exercise); err != nil {
+		return nil, err
+	}
+	return &proto.StatusResponse{Message: "OK"}, nil
+}
+
+// Recreates and starts an exercise in case it should be having problems of any sorts.
+func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
+	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	ctx = context.Background()
+	if err := l.ResetExercise(ctx, req.Exercise); err != nil {
+		return nil, fmt.Errorf("error resetting exercise: %v", err)
+	}
 	return &proto.StatusResponse{Message: "OK"}, nil
 }

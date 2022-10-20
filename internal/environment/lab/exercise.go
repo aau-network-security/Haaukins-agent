@@ -93,6 +93,43 @@ func (l *Lab) AddAndStartExercises(ctx context.Context, exerConfs ...exercise.Ex
 	return nil
 }
 
+// TODO: Set status of exercise so user can see weither if it is started or stopped.
+func (l *Lab) StartExercise(ctx context.Context, exTag string) error {
+	e, ok := l.ExTags[exTag]
+	if !ok {
+		return fmt.Errorf("could not find exercise with tag: %s", exTag)
+	}
+
+	if err := e.Start(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *Lab) StopExercise(ctx context.Context, exTag string) error {
+	e, ok := l.ExTags[exTag]
+	if !ok {
+		return fmt.Errorf("could not find exercise with tag: %s", exTag)
+	}
+
+	if err := e.Stop(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *Lab) ResetExercise(ctx context.Context, exTag string) error {
+	e, ok := l.ExTags[exTag]
+	if !ok {
+		return fmt.Errorf("could not find exercise with tag: %s", exTag)
+	}
+
+	if err := e.Reset(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (l *Lab) GetChallenges() []exercise.Challenge {
 	var challenges []exercise.Challenge
 	for _, e := range l.Exercises {

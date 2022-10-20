@@ -9,8 +9,11 @@ service Agent {
     rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
     rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
-    rpc AddExercisesToEnv (AddExercisesRequest) returns (StatusResponse) {}
-    rpc AddExercisesToLab(AddExercisesRequest) returns (StatusResponse) {}
+    rpc AddExercisesToEnv (ExerciseRequest) returns (StatusResponse) {}
+    rpc AddExercisesToLab(ExerciseRequest) returns (StatusResponse) {}
+    rpc ResetExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
+    rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
+    rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc LabStream(Empty) returns (stream Lab) {}
 }
 
@@ -26,9 +29,10 @@ message InitRequest {
 message CreatEnvRequest {
     string eventTag = 1;
     int32 envType = 2;
-    repeated VmConfig vms = 3;
+    VmConfig vm = 3;
     int32 initialLabs = 4;
     repeated string exercises = 5;
+    int32 teamSize = 6;
 }
 
 message CloseEnvRequest {
@@ -44,10 +48,11 @@ message CloseLabRequest {
     string labTag = 1;
 }
 
-message AddExercisesRequest {
+message ExerciseRequest {
     string labTag = 1;
     string envTag = 2;
     repeated string exercises = 3;
+    string exercise = 4;
 }
 
 message VmConfig {

@@ -23,8 +23,10 @@ var (
 	vpnIPPool = newIPPoolFromHost()
 )
 
-/* Creates a new lab environment for a new event.
-Labs can afterwards be added using the CreateLabsForEnv call */
+// Creates a new lab environment. Should be called by the daemon when a new event is being created.
+// Environments can be advanced or beginner environments.
+// Advanced environments is geared towards regular CTFs where as beginner environments can be used for
+// beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
 // TODO Check if environment exists, figure out what the logic should be.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
@@ -59,17 +61,18 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 	envConf.LabConf.ExerciseConfs = exerConfs
 
-	// Insert frontends for environment into environment config
-	var frontends = []vbox.InstanceConfig{}
-	for _, f := range req.Vms {
-		frontend := vbox.InstanceConfig{
-			Image:    f.Image,
-			MemoryMB: uint(f.MemoryMB),
-			CPU:      f.Cpu,
-		}
-		frontends = append(frontends, frontend)
+	frontend := vbox.InstanceConfig{
+		Image:    req.Vm.Image,
+		MemoryMB: uint(req.Vm.MemoryMB),
+		CPU:      req.Vm.Cpu,
 	}
-	envConf.LabConf.Frontends = append(envConf.LabConf.Frontends, frontends...)
+
+	if req.TeamSize == 0 {
+		return nil, errors.New("cannot create env with 0 teamsize")
+	}
+	for i := 0; i < int(req.TeamSize); i++ {
+		envConf.LabConf.Frontends = append(envConf.LabConf.Frontends, frontend)
+	}
 
 	// Set the vlib
 	envConf.LabConf.Vlib = a.vlib
@@ -142,7 +145,7 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 // It appends the new exercise configs to the existing lab config within the environment.
 // This is used for future labs that may start up.
 // Then it adds the exercises to the existing running labs under this environment.
-func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRequest) (*proto.StatusResponse, error) {
+func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
 	env, ok := a.State.EnvPool.Envs[req.EnvTag]
 	if !ok {
 		log.Error().Str("envTag", req.EnvTag).Msg("error finding finding environment with tag")

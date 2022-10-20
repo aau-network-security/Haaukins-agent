@@ -6,6 +6,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 )
 
+//todo manage exercise status somehow
 type Exercise struct {
 	ContainerOpts []ContainerOptions
 	VboxOpts      []ExerciseInstanceConfig
@@ -21,7 +22,6 @@ type Exercise struct {
 	Machines []virtual.Instance
 }
 
-//todo manage the status somehow
 type ExerciseConfig struct {
 	Tag      string `json:"tag,omitempty"`
 	Name     string `json:"name,omitempty"`
