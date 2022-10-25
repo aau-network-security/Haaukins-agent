@@ -160,7 +160,7 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseReques
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
-// Starts a suspended/stopped exercise
+// Starts a suspended/stopped exercise in a specific lab
 func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
 	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
@@ -175,7 +175,7 @@ func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
-// Stops a running exercise
+// Stops a running exercise for a specific lab
 func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
 	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
@@ -190,7 +190,7 @@ func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseReques
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
-// Recreates and starts an exercise in case it should be having problems of any sorts.
+// Recreates and starts an exercise in a specific lab in case it should be having problems of any sorts.
 func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
 	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
