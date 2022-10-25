@@ -32,6 +32,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		return Environment{}, err
 	}
 	// Getting wireguard client from config
+	//TODO MAke part of agent initilization
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
