@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"time"
 
@@ -30,7 +32,8 @@ func (a *Agent) RunGuacProxy() error {
 	}))
 	//r.Use(a.authMiddleware())
 
-	r.Any("/guacamole", a.proxy)
+	r.Any("/*guacamole", a.proxy)
+	//r.Any("/guacamole/", a.proxy)
 	port := fmt.Sprintf(":%d", a.config.ProxyPort)
 	return r.Run(port)
 }
@@ -44,8 +47,24 @@ func (a *Agent) proxy(c *gin.Context) {
 		return
 	}
 
-	log.Debug().Uint("guacPort", env.Guac.Port)
-	c.JSON(200, ProxyResponse{Message: "success"})
+	log.Debug().Uint("guacPort", env.Guac.Port).Msg("guacport for environment")
+	baseGuacHost := fmt.Sprintf("http://127.0.0.1:%d", env.Guac.Port)
+	guacUrl, err := url.Parse(baseGuacHost + "/guacamole")
+	if err != nil {
+		log.Error().Err(err).Msg("error parsing guacUrl")
+		c.JSON(http.StatusInternalServerError, ProxyResponse{Message: "internal server error"})
+		return
+	}
+
+	proxy := &httputil.ReverseProxy{}
+
+	proxy.Director = func(req *http.Request) {
+		req.Header.Add("X-Forwarded-Host", req.Host)
+		req.URL.Scheme = "http"
+		req.URL.Host = guacUrl.Host
+	}
+
+	proxy.ServeHTTP(c.Writer, c.Request)
 	return
 	//envTag := strings.Split(c.Get("location").string)
 	//url := fmt.Sprintf("http://")

@@ -43,9 +43,9 @@ func main() {
 
 	opts := []grpc.ServerOption{}
 
-	// go func() {
-	// 	a.RunGuacProxy()
-	// }()
+	go func() {
+		a.RunGuacProxy()
+	}()
 
 	gRPCServer := a.NewGRPCServer(opts...)
 	pb.RegisterAgentServer(gRPCServer, a)
