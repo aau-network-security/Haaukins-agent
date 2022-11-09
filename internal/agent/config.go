@@ -6,7 +6,8 @@ import (
 
 type Config struct {
 	Host               string                           `yaml:"host"`
-	Port               uint                             `yaml:"port"`
+	GrpcPort           uint                             `yaml:"grpcPort"`
+	ProxyPort          uint                             `yaml:"proxyPort"`
 	AuthKey            string                           `yaml:"auth-key"`
 	SignKey            string                           `yaml:"sign-key"`
 	MaxWorkers         int                              `yaml:"max-workers"`
@@ -17,6 +18,7 @@ type Config struct {
 	VPNService         VPNconf                          `yaml:"vpn-service"`
 	DockerRepositories []dockerclient.AuthConfiguration `yaml:"docker-repositories"`
 	GuacSSL            bool                             `yaml:"guac-ssl"`
+	JwtSecret          string                           `yaml:"jwtSecret"`
 }
 
 type VPNconf struct {

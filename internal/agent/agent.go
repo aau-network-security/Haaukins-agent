@@ -67,9 +67,9 @@ func NewConfigFromFile(path string) (*Config, error) {
 		c.Host = "localhost"
 	}
 
-	if c.Port == 0 {
+	if c.GrpcPort == 0 {
 		log.Debug().Msg("port not provided in the configuration file")
-		c.Port = 50095
+		c.GrpcPort = 50095
 	}
 
 	if c.SignKey == "" {
@@ -191,7 +191,7 @@ func New(conf *Config) (*Agent, error) {
 	workerPool.Run()
 
 	// Creating agent struct
-	d := &Agent{
+	a := &Agent{
 		initialized: initialized,
 		config:      conf,
 		redis: cache.RedisCache{
@@ -210,7 +210,7 @@ func New(conf *Config) (*Agent, error) {
 			},
 		},
 	}
-	return d, nil
+	return a, nil
 }
 
 func (d *Agent) NewGRPCServer(opts ...grpc.ServerOption) *grpc.Server {
