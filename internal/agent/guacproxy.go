@@ -19,6 +19,7 @@ type ProxyResponse struct {
 	Message string `json:"status,omitempty"`
 }
 
+// Sets up the gin framework, and uses the cors middleware to allow from all origins. It the runs the proxy on a port specified in the agent config
 func (a *Agent) RunGuacProxy() error {
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"127.0.0.1"})
@@ -33,11 +34,13 @@ func (a *Agent) RunGuacProxy() error {
 	//r.Use(a.authMiddleware())
 
 	r.Any("/*guacamole", a.proxy)
-	//r.Any("/guacamole/", a.proxy)
 	port := fmt.Sprintf(":%d", a.config.ProxyPort)
 	return r.Run(port)
 }
 
+// The guacamole proxy handler uses the subdomain of a request like "http://test.localhost:<proxyPort>/guacamole", to guide a participant to the right guacamole
+// container linked to their event. The subdomain should be the same as the event tag. It will then correlate the event tag to any running environments with the same tag
+// and proxy the request the the corresponding guacamole docker container.
 func (a *Agent) proxy(c *gin.Context) {
 	envTag := strings.Split(c.Request.Host, ".")[0]
 
@@ -66,17 +69,16 @@ func (a *Agent) proxy(c *gin.Context) {
 
 	proxy.ServeHTTP(c.Writer, c.Request)
 	return
-	//envTag := strings.Split(c.Get("location").string)
-	//url := fmt.Sprintf("http://")
-	//remote, err := url.Parse()
 }
 
+// Extracts the jwt from the Authorization header
 func (a *Agent) jwtExtract(c *gin.Context) string {
 	token := c.GetHeader("Authorization")
 	log.Debug().Msgf("Using secret key: %s", a.config.JwtSecret)
 	return token
 }
 
+// Verifies the signature of the JWT token
 func (a *Agent) jwtVerify(c *gin.Context) (*jwt.Token, error) {
 	tokenString := a.jwtExtract(c)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -91,6 +93,7 @@ func (a *Agent) jwtVerify(c *gin.Context) (*jwt.Token, error) {
 	return token, nil
 }
 
+// Makes sure that the JWT token is valid
 func (a *Agent) jwtValidate(c *gin.Context) (jwt.MapClaims, error) {
 	token, err := a.jwtVerify(c)
 	if err != nil {
@@ -105,6 +108,7 @@ func (a *Agent) jwtValidate(c *gin.Context) (jwt.MapClaims, error) {
 	}
 }
 
+// Middleware for gin to validate the incoming JWT and deny access if it cannot be validated
 func (a *Agent) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, err := a.jwtValidate(c)
