@@ -66,6 +66,12 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			return
 		}
 
+		if !lab.IsVPN {
+			if err := env.CreateGuacConn(lab); err != nil {
+				log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
+			}
+		}
+
 		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
 		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
 			log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")

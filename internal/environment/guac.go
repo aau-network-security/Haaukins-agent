@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
@@ -83,6 +84,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 		User: user,
 	})
 	mysqlPass := uuid.New().String()
+	log.Debug().Str("mysqlPass", mysqlPass).Msg("mysql pw for guac")
 	containers["db"] = docker.NewContainer(docker.ContainerConfig{
 		Image: "registry.gitlab.com/haaukins/core-utils/guacamole:mysql",
 		EnvVars: map[string]string{
@@ -162,6 +164,231 @@ func (guac *Guacamole) Close() error {
 	for _, c := range guac.Containers {
 		c.Close()
 	}
+	return nil
+}
+
+func (env *Environment) CreateGuacConn(lab lab.Lab) error {
+	enableWallPaper := true
+	enableDrive := true
+	createDrivePath := true
+	// Drive path is the home folder inside the docker guacamole
+	drivePath := "/home/" + lab.GuacUsername
+	rdpPorts := lab.RdpConnPorts()
+	if n := len(rdpPorts); n == 0 {
+		log.
+			Debug().
+			Int("amount", n).
+			Msg("Too few RDP connections")
+
+		return errors.New("error too few rdp connections")
+	}
+
+	log.Debug().Str("username", lab.GuacUsername).Str("password", lab.GuacPassword).Msg("creating guac user with credentials")
+	u := GuacUser{
+		Username: lab.GuacUsername,
+		Password: lab.GuacPassword,
+	}
+
+	if err := env.Guac.CreateUser(u.Username, u.Password); err != nil {
+		log.
+			Debug().
+			Str("err", err.Error()).
+			Msg("Unable to create guacamole user")
+		return err
+	}
+
+	hostIp, err := env.Dockerhost.GetDockerHostIP()
+	if err != nil {
+		return err
+	}
+
+	for i, port := range rdpPorts {
+		num := i + 1
+		name := fmt.Sprintf("%s-client%d", lab.GuacUsername, num)
+
+		log.Debug().Uint("port", port).Msg("Creating RDP Connection for lab")
+		if err := env.Guac.CreateRDPConn(CreateRDPConnOpts{
+			Host:            hostIp,
+			Port:            port,
+			Name:            name,
+			GuacUser:        u.Username,
+			Username:        &u.Username,
+			Password:        &u.Password,
+			EnableWallPaper: &enableWallPaper,
+			EnableDrive:     &enableDrive,
+			CreateDrivePath: &createDrivePath,
+			DrivePath:       &drivePath,
+		}); err != nil {
+			return err
+		}
+	}
+
+	instanceInfo := lab.InstanceInfo()
+	// Will not handle error below since this is not a critical function
+	_ = vbox.CreateUserFolder(lab.GuacUsername, env.EnvConfig.Tag)
+
+	for i := 0; i < len(rdpPorts); i++ {
+		if err := vbox.CreateFolderLink(instanceInfo[i].Id, env.EnvConfig.Tag, lab.GuacUsername); err != nil {
+			log.Error().Err(err).Str("instanceId", instanceInfo[i].Id).Msg("error creating folder link for instance with id")
+		}
+	}
+
+	return nil
+}
+
+// Creates a new user in Apache guacamole which can access a specific set of VMs
+func (guac *Guacamole) CreateUser(username, password string) error {
+	action := func(t string) (*http.Response, error) {
+		data := createUserInput{
+			Username: username,
+			Password: password,
+		}
+		jsonData, _ := json.Marshal(data)
+		endpoint := guac.baseUrl() + "/guacamole/api/session/data/mysql/users?token=" + t
+
+		req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		return guac.Client.Do(req)
+	}
+
+	var output struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+
+	if err := guac.authAction("create user", action, &output); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Creates the Apache Guacamole RDP connection to a specific vm
+func (guac *Guacamole) CreateRDPConn(opts CreateRDPConnOpts) error {
+	if opts.Host == "" {
+		return errors.New("host is missing")
+	}
+
+	if opts.Port == 0 {
+		return errors.New("port is missing")
+	}
+
+	if opts.Name == "" {
+		return errors.New("name is missing")
+	}
+
+	if opts.ResolutionWidth == 0 || opts.ResolutionHeight == 0 {
+		opts.ResolutionWidth = 1920
+		opts.ResolutionHeight = 1080
+	}
+
+	if opts.MaxConn == 0 {
+		opts.MaxConn = 10
+	}
+
+	if opts.ColorDepth%8 != 0 || opts.ColorDepth > 32 {
+		return errors.New("colorDepth can take the following values: 8, 16, 24, 32")
+	}
+
+	if opts.ColorDepth == 0 {
+		opts.ColorDepth = 16
+	}
+	log.Debug().Str("drive-path", *opts.DrivePath).Msg("Drivepath for user is")
+	conf := createRDPConnConf{
+		Hostname:        &opts.Host,
+		Width:           &opts.ResolutionWidth,
+		Height:          &opts.ResolutionHeight,
+		Port:            &opts.Port,
+		ColorDepth:      &opts.ColorDepth,
+		Username:        opts.Username,
+		Password:        opts.Password,
+		EnableWallpaper: opts.EnableWallPaper,
+		EnableDrive:     opts.EnableDrive,
+		CreateDrivePath: opts.CreateDrivePath,
+		DrivePath:       opts.DrivePath,
+	}
+
+	data := struct {
+		Name             string            `json:"name"`
+		ParentIdentifier string            `json:"parentIdentifier"`
+		Protocol         string            `json:"protocol"`
+		Attributes       createRDPConnAttr `json:"attributes"`
+		Parameters       createRDPConnConf `json:"parameters"`
+	}{
+		Name:             opts.Name,
+		ParentIdentifier: "ROOT",
+		Protocol:         "rdp",
+		Attributes: createRDPConnAttr{
+			MaxConn:        opts.MaxConn,
+			MaxConnPerUser: opts.MaxConn,
+		},
+		Parameters: conf,
+	}
+
+	jsonData, _ := json.Marshal(data)
+
+	action := func(t string) (*http.Response, error) {
+		endpoint := guac.baseUrl() + "/guacamole/api/session/data/mysql/connections?token=" + t
+		req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		return guac.Client.Do(req)
+	}
+
+	var out struct {
+		Id string `json:"identifier"`
+	}
+	if err := guac.authAction("create rdp connection", action, &out); err != nil {
+		return err
+	}
+
+	if err := guac.addConnectionToUser(out.Id, opts.GuacUser); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Adds newly created RDP connection to a specific Guacamole user
+func (guac *Guacamole) addConnectionToUser(id string, guacuser string) error {
+	data := []struct {
+		Operation string `json:"op"`
+		Path      string `json:"path"`
+		Value     string `json:"value"`
+	}{{
+		Operation: "add",
+		Path:      fmt.Sprintf("/connectionPermissions/%s", id),
+		Value:     "READ",
+	}}
+
+	jsonData, _ := json.Marshal(data)
+
+	action := func(t string) (*http.Response, error) {
+		endpoint := fmt.Sprintf("%s/guacamole/api/session/data/mysql/users/%s/permissions?token=%s",
+			guac.baseUrl(),
+			guacuser,
+			t)
+
+		req, err := http.NewRequest("PATCH", endpoint, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		return guac.Client.Do(req)
+	}
+
+	if err := guac.authAction("add user to connection", action, nil); err != nil {
+		return err
+	}
+
 	return nil
 }
 

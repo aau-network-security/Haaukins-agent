@@ -50,6 +50,8 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType LabType, even
 		ExTags:          make(map[string]*exercise.Exercise),
 		Vlib:            lc.Vlib,
 		ExerciseConfigs: lc.ExerciseConfs,
+		GuacUsername: uuid.New().String()[0:8],
+		GuacPassword: uuid.New().String()[0:8],
 	}
 
 	// Create lab network
@@ -262,6 +264,28 @@ func (l *Lab) addFrontend(ctx context.Context, conf vbox.InstanceConfig, rdpPort
 	log.Debug().Msgf("Created lab frontend on port %d", rdpPort)
 
 	return vm, nil
+}
+
+// Get a list of ports for the VMs running in the lab
+func (l *Lab) RdpConnPorts() []uint {
+	var ports []uint
+	for p := range l.Frontends {
+		ports = append(ports, p)
+	}
+
+	return ports
+}
+
+// Get a list of instance information for the VMs and exercises running in the lab
+func (l *Lab) InstanceInfo() []virtual.InstanceInfo {
+	var instances []virtual.InstanceInfo
+	for _, fconf := range l.Frontends {
+		instances = append(instances, fconf.vm.Info())
+	}
+	for _, e := range l.Exercises {
+		instances = append(instances, e.InstanceInfo()...)
+	}
+	return instances
 }
 
 //prepends a uuid to the eventTag

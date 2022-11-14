@@ -274,3 +274,11 @@ func (e *Exercise) GetChallenges() []Challenge {
 
 	return challenges
 }
+
+func (e *Exercise) InstanceInfo() []virtual.InstanceInfo {
+	var instances []virtual.InstanceInfo
+	for _, m := range e.Machines {
+		instances = append(instances, m.Info())
+	}
+	return instances
+}

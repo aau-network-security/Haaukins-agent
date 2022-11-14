@@ -27,6 +27,8 @@ type Lab struct {
 	DnsAddress        string
 	Vlib              vbox.Library
 	IsVPN             bool
+	GuacUsername      string
+	GuacPassword      string
 }
 
 type LabConf struct {

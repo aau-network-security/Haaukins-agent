@@ -106,3 +106,70 @@ type GuacUserStore struct {
 	m     sync.RWMutex
 	teams map[string]GuacUser
 }
+
+type createRDPConnAttr struct {
+	FailOverOnly     *bool   `json:"failover-only"`
+	GuacdEncripytion *string `json:"guacd-encryption"`
+	GuacdPort        *uint   `json:"guacd-port"`
+	MaxConn          uint    `json:"max-connections"`
+	MaxConnPerUser   uint    `json:"max-connections-per-user"`
+	Weight           *uint   `json:"weight"`
+}
+
+type createRDPConnConf struct {
+	ClipboardEncoding        *string `json:"clipboard-encoding"`
+	ColorDepth               *uint   `json:"color-depth"`
+	Console                  *string `json:"console"`
+	ConsoleAudio             *string `json:"console-audio"`
+	Cursor                   *string `json:"cursor"`
+	DestPort                 *uint   `json:"dest-port"`
+	DisableAudio             *bool   `json:"disable-audio"`
+	DisableAuth              *bool   `json:"disable-auth"`
+	DPI                      *uint   `json:"dpi"`
+	EnableAudio              *bool   `json:"enable-audio"`
+	EnableAudioInput         *bool   `json:"enable-audio-input"`
+	EnableDesktopComposition *bool   `json:"enable-desktop-composition"`
+	EnableDrive              *bool   `json:"enable-drive"`
+	EnableFontSmoothing      *bool   `json:"enable-font-smoothing"`
+	EnableFullWindowDrag     *bool   `json:"enable-full-window-drag"`
+	EnableMenuAnimations     *bool   `json:"enable-menu-animations"`
+	EnablePrinting           *bool   `json:"enable-printing"`
+	EnableSFTP               *bool   `json:"enable-sftp"`
+	EnableTheming            *bool   `json:"enable-theming"`
+	EnableWallpaper          *bool   `json:"enable-wallpaper"`
+	GatewayPort              *uint   `json:"gateway-port"`
+	Height                   *uint   `json:"height"`
+	Width                    *uint   `json:"width"`
+	Hostname                 *string `json:"hostname"`
+	IgnoreCert               *bool   `json:"ignore-cert"`
+	Port                     *uint   `json:"port"`
+	PreConnectionID          *uint   `json:"preconnection-id"`
+	ReadOnly                 *bool   `json:"read-only"`
+	ResizeMethod             *string `json:"resize-method"`
+	Security                 *string `json:"security"`
+	ServerLayout             *string `json:"server-layout"`
+	SFTPPort                 *uint   `json:"sftp-port"`
+	SFTPAliveInterval        *uint   `json:"sftp-server-alive-interval"`
+	SwapRedBlue              *bool   `json:"swap-red-blue"`
+	CreateDrivePath          *bool   `json:"create-drive-path"`
+	DrivePath                *string `json:"drive-path"`
+	Username                 *string `json:"username,omitempty"`
+	Password                 *string `json:"password,omitempty"`
+}
+
+type CreateRDPConnOpts struct {
+	Host             string
+	Port             uint
+	Name             string
+	GuacUser         string
+	Username         *string
+	Password         *string
+	EnableWallPaper  *bool
+	ResolutionWidth  uint
+	ResolutionHeight uint
+	MaxConn          uint
+	ColorDepth       uint
+	EnableDrive      *bool
+	CreateDrivePath  *bool
+	DrivePath        *string
+}
