@@ -48,7 +48,7 @@ func (a *Agent) RunGuacProxy() error {
 func (a *Agent) proxy(c *gin.Context) {
 	envTag := strings.Split(c.Request.Host, ".")[0]
 
-	env, ok := a.State.EnvPool.Envs[envTag]
+	env, ok := a.EnvPool.Envs[envTag]
 	if !ok {
 		c.JSON(http.StatusBadRequest, ProxyResponse{Message: "no guacamole for that event"})
 		return
@@ -79,7 +79,7 @@ func (a *Agent) proxy(c *gin.Context) {
 func (a *Agent) guaclogin(c *gin.Context) {
 	envTag := strings.Split(c.Request.Host, ".")[0]
 
-	_, ok := a.State.EnvPool.Envs[envTag]
+	_, ok := a.EnvPool.Envs[envTag]
 	if !ok {
 		c.JSON(http.StatusBadRequest, ProxyResponse{Message: "no guacamole for that event"})
 		return

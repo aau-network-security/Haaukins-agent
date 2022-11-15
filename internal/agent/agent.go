@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"google.golang.org/grpc"
 
-	"github.com/aau-network-security/haaukins-agent/internal/cache"
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
@@ -30,19 +30,15 @@ var configPath string
 type Agent struct {
 	initialized bool
 	config      *Config
-	redis       cache.RedisCache
-	State       *State
+	redis       state.RedisCache
+	State       *state.State
 	auth        Authenticator
 	vlib        vbox.Library
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
 	newLabs    chan pb.Lab
-}
-
-type State struct {
-	m        sync.RWMutex
-	EnvPool  *env.EnvPool `json:"envpool,omitempty"`
-	ExClient eproto.ExerciseStoreClient
+	ExClient   eproto.ExerciseStoreClient
+	EnvPool    *env.EnvPool `json:"envpool,omitempty"`
 }
 
 const DEFAULT_SIGN = "dev-sign-key"
@@ -194,7 +190,7 @@ func New(conf *Config) (*Agent, error) {
 	a := &Agent{
 		initialized: initialized,
 		config:      conf,
-		redis: cache.RedisCache{
+		redis: state.RedisCache{
 			Host: "127.0.0.1:6379",
 			DB:   0,
 		},
@@ -202,13 +198,12 @@ func New(conf *Config) (*Agent, error) {
 		vlib:       vbox.NewLibrary(conf.OvaDir),
 		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
 		newLabs:    make(chan pb.Lab, 100),
-		State: &State{
-			ExClient: exClient,
-			EnvPool: &env.EnvPool{
-				M:    &sync.RWMutex{},
-				Envs: make(map[string]*env.Environment),
-			},
+		ExClient:   exClient,
+		EnvPool: &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
 		},
+		State: &state.State{},
 	}
 	return a, nil
 }
@@ -280,6 +275,6 @@ func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.Status
 		return nil, fmt.Errorf("error writing config to file: %s", err)
 	}
 	a.initialized = true
-	a.State.ExClient = exClient
+	a.ExClient = exClient
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
