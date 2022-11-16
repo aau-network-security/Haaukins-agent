@@ -16,8 +16,6 @@ import (
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
@@ -65,27 +63,27 @@ func NewGuac(ctx context.Context, eventTag string) (Guacamole, error) {
 Creates the necessary containers for guacamole and configures the instance with a new admin password
 */
 func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
-	_ = vbox.CreateEventFolder(eventTag)
+	_ = virtual.CreateEventFolder(eventTag)
 
 	// If user is not specified, filetransfer mount is owned by root, and can therefore not be accessed by vbox vm
 	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	log.Debug().Str("user", user).Msg("starting guacd")
 
-	containers := map[string]docker.Container{}
-	containers["guacd"] = docker.NewContainer(docker.ContainerConfig{
+	containers := map[string]virtual.ContainerHandler{}
+	containers["guacd"] = virtual.NewContainer(virtual.ContainerConfig{
 		Image:     "guacamole/guacd:1.4.0",
 		UseBridge: true,
 		Labels: map[string]string{
 			"hkn": "guacamole_guacd",
 		},
 		Mounts: []string{
-			vbox.FileTransferRoot + "/" + eventTag + "/:/home/",
+			virtual.FileTransferRoot + "/" + eventTag + "/:/home/",
 		},
 		User: user,
 	})
 	mysqlPass := uuid.New().String()
 	log.Debug().Str("mysqlPass", mysqlPass).Msg("mysql pw for guac")
-	containers["db"] = docker.NewContainer(docker.ContainerConfig{
+	containers["db"] = virtual.NewContainer(virtual.ContainerConfig{
 		Image: "registry.gitlab.com/haaukins/core-utils/guacamole:mysql",
 		EnvVars: map[string]string{
 			"MYSQL_ROOT_PASSWORD": uuid.New().String(),
@@ -101,7 +99,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	guac.Port = virtual.GetAvailablePort()
 	guacdAlias := uuid.New().String()
 	dbAlias := uuid.New().String()
-	containers["web"] = docker.NewContainer(docker.ContainerConfig{
+	containers["web"] = virtual.NewContainer(virtual.ContainerConfig{
 		Image: "guacamole/guacamole:1.4.0",
 		EnvVars: map[string]string{
 			"MYSQL_DATABASE": "guacamole_db?useSSL=false",
@@ -225,10 +223,10 @@ func (env *Environment) CreateGuacConn(lab lab.Lab) error {
 
 	instanceInfo := lab.InstanceInfo()
 	// Will not handle error below since this is not a critical function
-	_ = vbox.CreateUserFolder(lab.GuacUsername, env.EnvConfig.Tag)
+	_ = virtual.CreateUserFolder(lab.GuacUsername, env.EnvConfig.Tag)
 
 	for i := 0; i < len(rdpPorts); i++ {
-		if err := vbox.CreateFolderLink(instanceInfo[i].Id, env.EnvConfig.Tag, lab.GuacUsername); err != nil {
+		if err := virtual.CreateFolderLink(instanceInfo[i].Id, env.EnvConfig.Tag, lab.GuacUsername); err != nil {
 			log.Error().Err(err).Str("instanceId", instanceInfo[i].Id).Msg("error creating folder link for instance with id")
 		}
 	}

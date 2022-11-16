@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3
 // license that can be found in the LICENSE file.
 
-package vbox
+package virtual
 
 import (
 	"bytes"
@@ -22,7 +22,6 @@ import (
 
 	"regexp"
 
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -63,27 +62,27 @@ func (err *VBoxErr) Error() string {
 	return fmt.Sprintf("VBoxError [%s]: %s", err.Action, string(err.Output))
 }
 
-type VM interface {
-	virtual.Instance
+type VmHandler interface {
+	Instance
 	Snapshot(string) error
-	LinkedClone(context.Context, string, ...VMOpt) (VM, error)
+	LinkedClone(context.Context, string, ...VMOpt) (VmHandler, error)
 }
 
-type Library interface {
-	GetCopy(context.Context, InstanceConfig, ...VMOpt) (VM, error)
+type VboxLibraryHandler interface {
+	GetCopy(context.Context, InstanceConfig, ...VMOpt) (VmHandler, error)
 	IsAvailable(string) bool
 	GetImagePath(string) string
 }
 
-type vBoxLibrary struct {
+type VboxLibrary struct {
 	m     sync.Mutex
 	pwd   string
-	known map[string]VM
+	known map[string]VmHandler
 	locks map[string]*sync.Mutex
 }
 
 // VM information is stored in a struct
-type vm struct {
+type Vm struct {
 	id      string
 	path    string
 	image   string
@@ -91,8 +90,8 @@ type vm struct {
 	running bool
 }
 
-func NewVMWithSum(path, image string, checksum string, vmOpts ...VMOpt) VM {
-	return &vm{
+func NewVMWithSum(path, image string, checksum string, vmOpts ...VMOpt) VmHandler {
+	return &Vm{
 		path:  path,
 		image: image,
 		opts:  vmOpts,
@@ -101,7 +100,7 @@ func NewVMWithSum(path, image string, checksum string, vmOpts ...VMOpt) VM {
 }
 
 // Creating VM
-func (vm *vm) Create(ctx context.Context) error {
+func (vm *Vm) Create(ctx context.Context) error {
 	_, err := VBoxCmdContext(ctx, "import", vm.path, "--vsys", "0", "--eula", "accept", "--vmname", vm.id)
 	if err != nil {
 		return err
@@ -117,7 +116,7 @@ func (vm *vm) Create(ctx context.Context) error {
 }
 
 // when Run is called, it calls Create function within it.
-func (vm *vm) Run(ctx context.Context) error {
+func (vm *Vm) Run(ctx context.Context) error {
 	if err := vm.Create(ctx); err != nil {
 		return err
 	}
@@ -125,7 +124,7 @@ func (vm *vm) Run(ctx context.Context) error {
 	return vm.Start(ctx)
 }
 
-func (vm *vm) Start(ctx context.Context) error {
+func (vm *Vm) Start(ctx context.Context) error {
 	_, err := VBoxCmdContext(ctx, vboxStartVM, vm.id, "--type", "headless")
 	if err != nil {
 		return err
@@ -148,7 +147,7 @@ func (vm *vm) Start(ctx context.Context) error {
 	return nil
 }
 
-func (vm *vm) Stop() error {
+func (vm *Vm) Stop() error {
 	_, err := VBoxCmdContext(context.Background(), vboxCtrlVM, vm.id, "poweroff")
 	if err != nil {
 		log.Error().Msgf("Error while shutting down VM %s", err)
@@ -165,7 +164,7 @@ func (vm *vm) Stop() error {
 }
 
 // Will call savestate on vm
-func (vm *vm) Suspend(ctx context.Context) error {
+func (vm *Vm) Suspend(ctx context.Context) error {
 	_, err := VBoxCmdContext(ctx, vboxCtrlVM, vm.id, "savestate")
 	if err != nil {
 		log.Error().
@@ -181,7 +180,7 @@ func (vm *vm) Suspend(ctx context.Context) error {
 	return nil
 }
 
-func (vm *vm) Close() error {
+func (vm *Vm) Close() error {
 	_, err := vm.ensureStopped(nil)
 	if err != nil {
 		log.Warn().
@@ -204,9 +203,9 @@ func (vm *vm) Close() error {
 	return nil
 }
 
-type VMOpt func(context.Context, *vm) error
+type VMOpt func(context.Context, *Vm) error
 
-func removeAllNICs(ctx context.Context, vm *vm) error {
+func removeAllNICs(ctx context.Context, vm *Vm) error {
 	result, err := VBoxCmdContext(ctx, vboxShowVMInfo, vm.id)
 	if err != nil {
 		return err
@@ -223,7 +222,7 @@ func removeAllNICs(ctx context.Context, vm *vm) error {
 }
 
 func SetBridge(nic string) VMOpt {
-	return func(ctx context.Context, vm *vm) error {
+	return func(ctx context.Context, vm *Vm) error {
 		// Removes all NIC cards from importing VMs
 		if err := removeAllNICs(ctx, vm); err != nil {
 			return err
@@ -244,7 +243,7 @@ func SetBridge(nic string) VMOpt {
 }
 
 func SetLocalRDP(ip string, port uint) VMOpt {
-	return func(ctx context.Context, vm *vm) error {
+	return func(ctx context.Context, vm *Vm) error {
 		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--vrde", "on")
 		if err != nil {
 			return err
@@ -285,20 +284,20 @@ func SetLocalRDP(ip string, port uint) VMOpt {
 }
 
 func SetCPU(cores uint) VMOpt {
-	return func(ctx context.Context, vm *vm) error {
+	return func(ctx context.Context, vm *Vm) error {
 		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--cpus", fmt.Sprintf("%d", cores))
 		return err
 	}
 }
 
 func SetRAM(mb uint) VMOpt {
-	return func(ctx context.Context, vm *vm) error {
+	return func(ctx context.Context, vm *Vm) error {
 		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--memory", fmt.Sprintf("%d", mb))
 		return err
 	}
 }
 
-func (vm *vm) ensureStopped(ctx context.Context) (func(), error) {
+func (vm *Vm) ensureStopped(ctx context.Context) (func(), error) {
 	wasRunning := vm.running
 	if vm.running {
 		if err := vm.Stop(); err != nil {
@@ -312,7 +311,7 @@ func (vm *vm) ensureStopped(ctx context.Context) (func(), error) {
 		}
 	}, nil
 }
-func (vm *vm) Snapshot(name string) error {
+func (vm *Vm) Snapshot(name string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -324,14 +323,14 @@ func (vm *vm) Snapshot(name string) error {
 	return nil
 }
 
-func (v *vm) LinkedClone(ctx context.Context, snapshot string, vmOpts ...VMOpt) (VM, error) {
+func (v *Vm) LinkedClone(ctx context.Context, snapshot string, vmOpts ...VMOpt) (VmHandler, error) {
 	newID := strings.Replace(uuid.New().String(), "-", "", -1)
 	_, err := VBoxCmdContext(ctx, "clonevm", v.id, "--snapshot", snapshot, "--options", "link", "--name", newID, "--register")
 	if err != nil {
 		return nil, err
 	}
 
-	vm := &vm{
+	vm := &Vm{
 		image: v.image,
 		id:    newID,
 	}
@@ -344,33 +343,32 @@ func (v *vm) LinkedClone(ctx context.Context, snapshot string, vmOpts ...VMOpt) 
 	return vm, nil
 }
 
-func (v *vm) state() virtual.State {
+func (v *Vm) state() State {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	raw, err := VBoxCmdContext(ctx, vboxShowVMInfo, v.id)
 	if err != nil {
-		return virtual.Error
+		return Error
 	}
 
 	r := regexp.MustCompile(stateRegex)
 	matched := r.FindSubmatch(raw)
 	if len(matched) == 0 {
-		return virtual.Error
+		return Error
 	}
 	if strings.Contains(string(matched[0]), "running") {
-		return virtual.Running
+		return Running
 	}
-
 	if strings.Contains(string(matched[0]), "saved") {
-		return virtual.Suspended
+		return Suspended
 	}
 
-	return virtual.Stopped
+	return Stopped
 }
 
-func (v *vm) Info() virtual.InstanceInfo {
-	return virtual.InstanceInfo{
+func (v *Vm) Info() InstanceInfo {
+	return InstanceInfo{
 		Image: v.image,
 		Type:  "vbox",
 		Id:    v.id,
@@ -378,15 +376,15 @@ func (v *vm) Info() virtual.InstanceInfo {
 	}
 }
 
-func NewLibrary(pwd string) Library {
-	return &vBoxLibrary{
+func NewLibrary(pwd string) VboxLibraryHandler {
+	return &VboxLibrary{
 		pwd:   pwd,
-		known: make(map[string]VM),
+		known: make(map[string]VmHandler),
 		locks: make(map[string]*sync.Mutex),
 	}
 }
 
-func (lib *vBoxLibrary) GetImagePath(file string) string {
+func (lib *VboxLibrary) GetImagePath(file string) string {
 	if !strings.HasPrefix(file, lib.pwd) {
 		file = filepath.Join(lib.pwd, file)
 	}
@@ -398,7 +396,7 @@ func (lib *vBoxLibrary) GetImagePath(file string) string {
 	return file
 }
 
-func (lib *vBoxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts ...VMOpt) (VM, error) {
+func (lib *VboxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts ...VMOpt) (VmHandler, error) {
 	path := lib.GetImagePath(conf.Image)
 
 	lib.m.Lock()
@@ -465,7 +463,7 @@ func (lib *vBoxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts
 	return instance, nil
 }
 
-func (lib *vBoxLibrary) IsAvailable(file string) bool {
+func (lib *VboxLibrary) IsAvailable(file string) bool {
 	path := lib.GetImagePath(file)
 	if _, err := os.Stat(path); err == nil {
 		return true
@@ -491,7 +489,7 @@ func checksumOfFile(filepath string) (string, error) {
 	return hex.EncodeToString(checksum), nil
 }
 
-func VmExists(image string, checksum string) (VM, bool) {
+func VmExists(image string, checksum string) (VmHandler, bool) {
 	name := fmt.Sprintf("%s{%s}", image, checksum)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -503,7 +501,7 @@ func VmExists(image string, checksum string) (VM, bool) {
 	}
 
 	if bytes.Contains(out, []byte("\""+name+"\"")) {
-		return &vm{
+		return &Vm{
 			image: image,
 			id:    name,
 		}, true

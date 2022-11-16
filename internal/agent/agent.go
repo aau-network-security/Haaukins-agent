@@ -15,8 +15,6 @@ import (
 
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/aau-network-security/haaukins-agent/internal/worker"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
@@ -33,7 +31,7 @@ type Agent struct {
 	redis       state.RedisCache
 	State       *state.State
 	auth        Authenticator
-	vlib        vbox.Library
+	vlib        virtual.VboxLibraryHandler
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
 	newLabs    chan pb.Lab
@@ -103,7 +101,7 @@ func NewConfigFromFile(path string) (*Config, error) {
 	}
 
 	for _, repo := range c.DockerRepositories {
-		docker.Registries[repo.ServerAddress] = repo
+		virtual.Registries[repo.ServerAddress] = repo
 	}
 
 	return &c, nil
@@ -112,7 +110,7 @@ func NewConfigFromFile(path string) (*Config, error) {
 func New(conf *Config) (*Agent, error) {
 	ctx := context.Background()
 	// Creating filetransfer root if not exists
-	err := vbox.CreateFileTransferRoot(conf.FileTransferRoot)
+	err := virtual.CreateFileTransferRoot(conf.FileTransferRoot)
 	if err != nil {
 		log.Fatal().Msgf("Error while creating file transfer root: %s", err)
 	}
@@ -126,7 +124,7 @@ func New(conf *Config) (*Agent, error) {
 	}
 
 	// Check if redis is running
-	container, err := docker.GetRedisContainer(conf.RedisDataPath)
+	container, err := virtual.GetRedisContainer(conf.RedisDataPath)
 	if err != nil {
 		log.Error().Err(err).Msg("error getting container state")
 		return nil, err
@@ -149,7 +147,7 @@ func New(conf *Config) (*Agent, error) {
 	} else {
 		// Didn't detect the redis container, starting a new one...
 		log.Info().Msg("No redis container detected, creating a new one")
-		container = docker.NewContainer(docker.ContainerConfig{
+		container = virtual.NewContainer(virtual.ContainerConfig{
 			Image:     "redis:7.0.4",
 			Name:      "redis_cache",
 			UseBridge: true,
@@ -195,7 +193,7 @@ func New(conf *Config) (*Agent, error) {
 			DB:   0,
 		},
 		workerPool: workerPool,
-		vlib:       vbox.NewLibrary(conf.OvaDir),
+		vlib:       virtual.NewLibrary(conf.OvaDir),
 		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
 		newLabs:    make(chan pb.Lab, 100),
 		ExClient:   exClient,

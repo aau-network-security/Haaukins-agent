@@ -11,11 +11,11 @@ import (
 	"os"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 )
 
 type Server struct {
-	cont     docker.Container
+	cont     virtual.ContainerHandler
 	confFile string
 	dns      string
 	subnet   string
@@ -51,14 +51,14 @@ func New(format func(n int) string) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	cont := docker.NewContainer(docker.ContainerConfig{
+	cont := virtual.NewContainer(virtual.ContainerConfig{
 		Image: "networkboot/dhcpd:1.2.0",
 		Mounts: []string{
 			fmt.Sprintf("%s:/data/dhcpd.conf", confFile),
 		},
 		DNS:       []string{dns},
 		UsedPorts: []string{"67/udp"},
-		Resources: &docker.Resources{
+		Resources: &virtual.Resources{
 			MemoryMB: 50,
 			CPU:      0.3,
 		},
@@ -76,7 +76,7 @@ func New(format func(n int) string) (*Server, error) {
 	}, nil
 }
 
-func (dhcp *Server) Container() docker.Container {
+func (dhcp *Server) Container() virtual.ContainerHandler {
 	return dhcp.cont
 }
 

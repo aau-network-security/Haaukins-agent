@@ -5,8 +5,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
-	dockerHaaukins "github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	docker "github.com/fsouza/go-dockerclient"
 )
 
@@ -56,7 +55,7 @@ type Lab struct {
 }
 
 type LabConf struct {
-	Frontends         []vbox.InstanceConfig
+	Frontends         []virtual.InstanceConfig
 	ExerciseConfs     []exercise.ExerciseConfig
 	DisabledExercises []string
 }
@@ -94,7 +93,7 @@ type Network struct {
 
 type FrontendConf struct {
 	vm   Vm
-	Conf vbox.InstanceConfig
+	Conf virtual.InstanceConfig
 }
 
 type Vm struct {
@@ -113,7 +112,7 @@ type Guacamole struct {
 
 type Container struct {
 	Id      string
-	Conf    dockerHaaukins.ContainerConfig
+	Conf    virtual.ContainerConfig
 	Network docker.Network
 }
 

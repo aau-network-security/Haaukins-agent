@@ -12,7 +12,7 @@ import (
 
 	"io"
 
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,7 +38,7 @@ const (
 )
 
 type Server struct {
-	cont     docker.Container
+	cont     virtual.ContainerHandler
 	confFile string
 	io.Closer
 }
@@ -83,7 +83,7 @@ func New(records []RR) (*Server, error) {
 	c.Write([]byte(coreFileContent))
 
 	f.Sync()
-	cont := docker.NewContainer(docker.ContainerConfig{
+	cont := virtual.NewContainer(virtual.ContainerConfig{
 		Image: "coredns/coredns:1.6.1",
 		Mounts: []string{
 			fmt.Sprintf("%s:/Corefile", coreFile),
@@ -93,7 +93,7 @@ func New(records []RR) (*Server, error) {
 			"53/tcp",
 			"53/udp",
 		},
-		Resources: &docker.Resources{
+		Resources: &virtual.Resources{
 			MemoryMB: 50,
 			CPU:      0.3,
 		},
@@ -109,7 +109,7 @@ func New(records []RR) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Container() docker.Container {
+func (s *Server) Container() virtual.ContainerHandler {
 	return s.cont
 }
 

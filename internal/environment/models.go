@@ -6,7 +6,7 @@ import (
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/worker"
 )
 
@@ -25,7 +25,7 @@ type Environment struct {
 	IpAddrs       []int
 	Wg            wg.WireguardClient
 	GuacUserStore *GuacUserStore
-	Dockerhost    docker.Host
+	Dockerhost    virtual.Host
 	Labs          map[string]*lab.Lab
 	// Fill out rest when starting to make labs
 }
@@ -78,7 +78,7 @@ type Guacamole struct {
 	Token      string
 	Port       uint
 	AdminPass  string
-	Containers map[string]docker.Container
+	Containers map[string]virtual.ContainerHandler
 }
 
 type createUserAttributes struct {

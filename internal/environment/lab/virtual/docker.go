@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3
 // license that can be found in the LICENSE file.
 
-package docker
+package virtual
 
 import (
 	"context"
@@ -24,7 +24,6 @@ import (
 
 	"io"
 
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -126,9 +125,9 @@ type Identifier interface {
 	ID() string
 }
 
-type Container interface {
+type ContainerHandler interface {
 	Identifier
-	virtual.Instance
+	Instance
 	BridgeAlias(string) (string, error)
 }
 
@@ -185,13 +184,13 @@ type container struct {
 	linked  []Identifier
 }
 
-func NewContainer(conf ContainerConfig) Container {
+func NewContainer(conf ContainerConfig) ContainerHandler {
 	return &container{
 		conf: conf,
 	}
 }
 
-func GetRedisContainer(mountPath string) (Container, error) {
+func GetRedisContainer(mountPath string) (ContainerHandler, error) {
 	redisContainer, err := DefaultClient.ListContainers(docker.ListContainersOptions{
 		All: true,
 		Filters: map[string][]string{
@@ -398,7 +397,7 @@ func (c *container) Start(ctx context.Context) error {
 		return ContNotCreatedErr
 	}
 
-	if c.state() == virtual.Suspended {
+	if c.state() == Suspended {
 		if err := DefaultClient.UnpauseContainer(c.id); err != nil {
 			return err
 		}
@@ -450,26 +449,26 @@ func (c *container) Stop() error {
 	return nil
 }
 
-func (c *container) state() virtual.State {
+func (c *container) state() State {
 	cont, err := DefaultClient.InspectContainer(c.id)
 
 	if err != nil {
-		return virtual.Error
+		return Error
 	}
 
 	if cont.State.Paused {
-		return virtual.Suspended
+		return Suspended
 	}
 
 	if cont.State.Running {
-		return virtual.Running
+		return Running
 	}
 
-	return virtual.Stopped
+	return Stopped
 }
 
-func (c *container) Info() virtual.InstanceInfo {
-	return virtual.InstanceInfo{
+func (c *container) Info() InstanceInfo {
+	return InstanceInfo{
 		Image: c.conf.Image,
 		Type:  "docker",
 		Id:    c.ID()[0:12],
@@ -516,7 +515,7 @@ func (c *container) BridgeAlias(alias string) (string, error) {
 	return DefaultLinkBridge.connect(c.id, alias)
 }
 
-type network struct {
+type Network struct {
 	net       *docker.Network
 	subnet    string
 	isVPN     bool
@@ -524,15 +523,15 @@ type network struct {
 	connected []Identifier
 }
 
-type Network interface {
+type NetworkHandler interface {
 	FormatIP(num int) string
 	Interface() string
 	SetIsVPN(bool)
-	Connect(c Container, ip ...int) (int, error)
+	Connect(c ContainerHandler, ip ...int) (int, error)
 	io.Closer
 }
 
-func NewNetwork(isVPN bool) (Network, error) {
+func NewNetwork(isVPN bool) (NetworkHandler, error) {
 	sub, err := ipPool.Get()
 	if err != nil {
 		return nil, fmt.Errorf("ip pool get new network err %v", err)
@@ -573,13 +572,13 @@ func NewNetwork(isVPN bool) (Network, error) {
 		ipPool[uint(i)] = struct{}{}
 	}
 
-	return &network{net: netw, subnet: subnet, isVPN: isVPN, ipPool: ipPool}, nil
+	return &Network{net: netw, subnet: subnet, isVPN: isVPN, ipPool: ipPool}, nil
 }
 
-func (n *network) SetIsVPN(isVPN bool) {
+func (n *Network) SetIsVPN(isVPN bool) {
 	n.isVPN = isVPN
 }
-func (n *network) Close() error {
+func (n *Network) Close() error {
 	for _, cont := range n.connected {
 		if err := DefaultClient.DisconnectNetwork(n.net.ID, docker.NetworkConnectionOptions{
 			Container: cont.ID(),
@@ -591,11 +590,11 @@ func (n *network) Close() error {
 	return DefaultClient.RemoveNetwork(n.net.ID)
 }
 
-func (n *network) FormatIP(num int) string {
+func (n *Network) FormatIP(num int) string {
 	return fmt.Sprintf("%s.%d", n.subnet[0:len(n.subnet)-5], num)
 }
 
-func (n *network) Interface() string {
+func (n *Network) Interface() string {
 	var pDriver string
 	if n.isVPN {
 		pDriver = "br"
@@ -607,7 +606,7 @@ func (n *network) Interface() string {
 	return fmt.Sprintf("%s-%s", pDriver, n.net.ID[0:12])
 }
 
-func (n *network) getRandomIP() int {
+func (n *Network) getRandomIP() int {
 	for randDigit := range n.ipPool {
 		delete(n.ipPool, randDigit)
 		return int(randDigit)
@@ -615,7 +614,7 @@ func (n *network) getRandomIP() int {
 	return 0
 }
 
-func (n *network) releaseIP(ip string) {
+func (n *Network) releaseIP(ip string) {
 	parts := strings.Split(ip, ".")
 	strDigit := parts[len(parts)-1]
 
@@ -627,7 +626,7 @@ func (n *network) releaseIP(ip string) {
 	n.ipPool[uint(num)] = struct{}{}
 }
 
-func (n *network) Connect(c Container, ip ...int) (int, error) {
+func (n *Network) Connect(c ContainerHandler, ip ...int) (int, error) {
 	var lastDigit int
 
 	if len(ip) > 0 {

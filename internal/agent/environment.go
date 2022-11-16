@@ -13,7 +13,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
@@ -61,7 +61,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 	envConf.LabConf.ExerciseConfs = exerConfs
 
-	frontend := vbox.InstanceConfig{
+	frontend := virtual.InstanceConfig{
 		Image:    req.Vm.Image,
 		MemoryMB: uint(req.Vm.MemoryMB),
 		CPU:      req.Vm.Cpu,
@@ -127,7 +127,7 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 	vpnIP := strings.ReplaceAll(envConf.VPNAddress, ".240.1/22", "")
 	vpnIPPool.ReleaseIP(vpnIP)
 
-	if err := vbox.RemoveEventFolder(string(envConf.Tag)); err != nil {
+	if err := virtual.RemoveEventFolder(string(envConf.Tag)); err != nil {
 		//do nothing
 	}
 

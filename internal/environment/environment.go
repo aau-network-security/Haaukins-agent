@@ -14,7 +14,7 @@ import (
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog/log"
 )
@@ -44,7 +44,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		execFunc: shellExec,
 	}
 
-	dockerHost := docker.NewHost()
+	dockerHost := virtual.NewHost()
 
 	var eventVPNIPs []int
 
@@ -96,7 +96,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 					if err := env.CreateGuacConn(lab); err != nil {
 						log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
 					}
-				}				
+				}
 
 				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
 				// If lab was created while running CloseEnvironment, close the lab
