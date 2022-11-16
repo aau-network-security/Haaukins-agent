@@ -78,7 +78,7 @@ type Guacamole struct {
 	Token      string
 	Port       uint
 	AdminPass  string
-	Containers map[string]virtual.ContainerHandler
+	Containers map[string]*virtual.Container
 }
 
 type createUserAttributes struct {

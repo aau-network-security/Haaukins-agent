@@ -23,7 +23,7 @@ var (
 )
 
 // TODO add comments
-func NewExercise(conf ExerciseConfig, vlib virtual.VboxLibraryHandler, net virtual.NetworkHandler, dnsAddr string) *Exercise {
+func NewExercise(conf ExerciseConfig, vlib *virtual.VboxLibrary, net *virtual.Network, dnsAddr string) *Exercise {
 	var containerOpts []ContainerOptions
 	var vboxOpts []ExerciseInstanceConfig
 	var ex *Exercise
@@ -190,7 +190,7 @@ func (e *Exercise) Close() error {
 	return nil
 }
 
-func CreateContainer(ctx context.Context, conf virtual.ContainerConfig) (virtual.ContainerHandler, error) {
+func CreateContainer(ctx context.Context, conf virtual.ContainerConfig) (*virtual.Container, error) {
 	c := virtual.NewContainer(conf)
 	err := c.Create(ctx)
 

@@ -69,7 +69,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	log.Debug().Str("user", user).Msg("starting guacd")
 
-	containers := map[string]virtual.ContainerHandler{}
+	containers := map[string]*virtual.Container{}
 	containers["guacd"] = virtual.NewContainer(virtual.ContainerConfig{
 		Image:     "guacamole/guacd:1.4.0",
 		UseBridge: true,

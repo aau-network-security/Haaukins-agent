@@ -62,22 +62,22 @@ func (err *VBoxErr) Error() string {
 	return fmt.Sprintf("VBoxError [%s]: %s", err.Action, string(err.Output))
 }
 
-type VmHandler interface {
-	Instance
-	Snapshot(string) error
-	LinkedClone(context.Context, string, ...VMOpt) (VmHandler, error)
-}
+// type VmHandler interface {
+// 	Instance
+// 	Snapshot(string) error
+// 	LinkedClone(context.Context, string, ...VMOpt) (VmHandler, error)
+// }
 
-type VboxLibraryHandler interface {
-	GetCopy(context.Context, InstanceConfig, ...VMOpt) (VmHandler, error)
-	IsAvailable(string) bool
-	GetImagePath(string) string
-}
+// type VboxLibraryHandler interface {
+// 	GetCopy(context.Context, InstanceConfig, ...VMOpt) (*Vm, error)
+// 	IsAvailable(string) bool
+// 	GetImagePath(string) string
+// }
 
 type VboxLibrary struct {
 	m     sync.Mutex
 	pwd   string
-	known map[string]VmHandler
+	known map[string]*Vm
 	locks map[string]*sync.Mutex
 }
 
@@ -90,7 +90,7 @@ type Vm struct {
 	running bool
 }
 
-func NewVMWithSum(path, image string, checksum string, vmOpts ...VMOpt) VmHandler {
+func NewVMWithSum(path, image string, checksum string, vmOpts ...VMOpt) *Vm {
 	return &Vm{
 		path:  path,
 		image: image,
@@ -323,7 +323,7 @@ func (vm *Vm) Snapshot(name string) error {
 	return nil
 }
 
-func (v *Vm) LinkedClone(ctx context.Context, snapshot string, vmOpts ...VMOpt) (VmHandler, error) {
+func (v *Vm) LinkedClone(ctx context.Context, snapshot string, vmOpts ...VMOpt) (*Vm, error) {
 	newID := strings.Replace(uuid.New().String(), "-", "", -1)
 	_, err := VBoxCmdContext(ctx, "clonevm", v.id, "--snapshot", snapshot, "--options", "link", "--name", newID, "--register")
 	if err != nil {
@@ -376,10 +376,10 @@ func (v *Vm) Info() InstanceInfo {
 	}
 }
 
-func NewLibrary(pwd string) VboxLibraryHandler {
+func NewLibrary(pwd string) *VboxLibrary {
 	return &VboxLibrary{
 		pwd:   pwd,
-		known: make(map[string]VmHandler),
+		known: make(map[string]*Vm),
 		locks: make(map[string]*sync.Mutex),
 	}
 }
@@ -396,7 +396,7 @@ func (lib *VboxLibrary) GetImagePath(file string) string {
 	return file
 }
 
-func (lib *VboxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts ...VMOpt) (VmHandler, error) {
+func (lib *VboxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts ...VMOpt) (*Vm, error) {
 	path := lib.GetImagePath(conf.Image)
 
 	lib.m.Lock()
@@ -489,7 +489,7 @@ func checksumOfFile(filepath string) (string, error) {
 	return hex.EncodeToString(checksum), nil
 }
 
-func VmExists(image string, checksum string) (VmHandler, bool) {
+func VmExists(image string, checksum string) (*Vm, bool) {
 	name := fmt.Sprintf("%s{%s}", image, checksum)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

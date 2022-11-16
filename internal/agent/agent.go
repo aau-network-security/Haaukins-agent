@@ -31,7 +31,7 @@ type Agent struct {
 	redis       state.RedisCache
 	State       *state.State
 	auth        Authenticator
-	vlib        virtual.VboxLibraryHandler
+	vlib        *virtual.VboxLibrary
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
 	newLabs    chan pb.Lab

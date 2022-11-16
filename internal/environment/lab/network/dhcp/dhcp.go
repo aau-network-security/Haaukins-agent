@@ -15,7 +15,7 @@ import (
 )
 
 type Server struct {
-	cont     virtual.ContainerHandler
+	cont     *virtual.Container
 	confFile string
 	dns      string
 	subnet   string
@@ -76,7 +76,7 @@ func New(format func(n int) string) (*Server, error) {
 	}, nil
 }
 
-func (dhcp *Server) Container() virtual.ContainerHandler {
+func (dhcp *Server) Container() *virtual.Container {
 	return dhcp.cont
 }
 

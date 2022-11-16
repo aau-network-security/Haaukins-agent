@@ -10,8 +10,8 @@ type Exercise struct {
 	VboxOpts      []ExerciseInstanceConfig
 
 	Tag  string
-	Vlib virtual.VboxLibraryHandler
-	Net  virtual.NetworkHandler
+	Vlib *virtual.VboxLibrary
+	Net  *virtual.Network
 
 	DnsAddr    string
 	DnsRecords []RecordConfig

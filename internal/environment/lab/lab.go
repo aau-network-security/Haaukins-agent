@@ -133,7 +133,7 @@ func (l *Lab) Close() error {
 	var wg sync.WaitGroup
 	for _, lab := range l.Frontends {
 		wg.Add(1)
-		go func(vm virtual.VmHandler) {
+		go func(vm *virtual.Vm) {
 			// closing VMs....
 			defer wg.Done()
 			if err := vm.Close(); err != nil {
@@ -225,7 +225,7 @@ func (l *Lab) CreateNetwork(ctx context.Context, isVPN bool) error {
 	return nil
 }
 
-func (l *Lab) addFrontend(ctx context.Context, conf virtual.InstanceConfig, rdpPort uint) (virtual.VmHandler, error) {
+func (l *Lab) addFrontend(ctx context.Context, conf virtual.InstanceConfig, rdpPort uint) (*virtual.Vm, error) {
 	hostIp, err := l.DockerHost.GetDockerHostIP()
 	if err != nil {
 		return nil, err

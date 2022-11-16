@@ -22,8 +22,6 @@ import (
 
 	"net"
 
-	"io"
-
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -121,16 +119,6 @@ func (h *host) GetDockerHostIP() (string, error) {
 	return getDockerHostIP()
 }
 
-type Identifier interface {
-	ID() string
-}
-
-type ContainerHandler interface {
-	Identifier
-	Instance
-	BridgeAlias(string) (string, error)
-}
-
 type ContainerConfig struct {
 	Name         string
 	Image        string
@@ -177,20 +165,20 @@ func (i Image) NameWithReg() string {
 	return i.Registry + "/" + i.Repo
 }
 
-type container struct {
-	id      string
-	conf    ContainerConfig
-	network *docker.Network
-	linked  []Identifier
+type Container struct {
+	Id      string
+	Conf    ContainerConfig
+	Network *docker.Network
+	Linked  []*Container
 }
 
-func NewContainer(conf ContainerConfig) ContainerHandler {
-	return &container{
-		conf: conf,
+func NewContainer(conf ContainerConfig) *Container {
+	return &Container{
+		Conf: conf,
 	}
 }
 
-func GetRedisContainer(mountPath string) (ContainerHandler, error) {
+func GetRedisContainer(mountPath string) (*Container, error) {
 	redisContainer, err := DefaultClient.ListContainers(docker.ListContainersOptions{
 		All: true,
 		Filters: map[string][]string{
@@ -205,10 +193,10 @@ func GetRedisContainer(mountPath string) (ContainerHandler, error) {
 		return nil, nil
 	}
 
-	c := &container{}
-	c.id = redisContainer[0].ID
+	c := &Container{}
+	c.Id = redisContainer[0].ID
 
-	c.conf = ContainerConfig{
+	c.Conf = ContainerConfig{
 		Image:     "redis:7.0.4",
 		Name:      "redis_cache",
 		UseBridge: true,
@@ -222,22 +210,22 @@ func GetRedisContainer(mountPath string) (ContainerHandler, error) {
 
 	return c, nil
 }
-func (c *container) ID() string {
-	return c.id
+func (c *Container) ID() string {
+	return c.Id
 }
 
-func (c *container) getCreateConfig() (*docker.CreateContainerOptions, error) {
+func (c *Container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 	var env []string
-	for k, v := range c.conf.EnvVars {
+	for k, v := range c.Conf.EnvVars {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	bindings := make(map[docker.Port][]docker.PortBinding)
-	for guestPort, hostListen := range c.conf.PortBindings {
+	for guestPort, hostListen := range c.Conf.PortBindings {
 		log.Debug().
 			Str("guestPort", guestPort).
 			Str("hostListen", hostListen).
-			Msgf("Port bindings for new '%s' container", c.conf.Image)
+			Msgf("Port bindings for new '%s' container", c.Conf.Image)
 
 		hostIP := ""
 		hostPort := hostListen
@@ -270,7 +258,7 @@ func (c *container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 	}
 
 	var mounts []docker.HostMount
-	for _, mount := range c.conf.Mounts {
+	for _, mount := range c.Conf.Mounts {
 		parts := strings.Split(mount, ":")
 		if len(parts) != 2 {
 			return nil, InvalidMountErr
@@ -297,26 +285,26 @@ func (c *container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 		MemorySwappiness: &swap,
 	}
 
-	if c.conf.Resources != nil {
-		if c.conf.Resources.MemoryMB > 0 {
-			if c.conf.Resources.MemoryMB < 50 {
+	if c.Conf.Resources != nil {
+		if c.Conf.Resources.MemoryMB > 0 {
+			if c.Conf.Resources.MemoryMB < 50 {
 				return nil, TooLowMemErr
 			}
 
-			hostConf.Memory = int64(c.conf.Resources.MemoryMB) * 1024 * 1024
+			hostConf.Memory = int64(c.Conf.Resources.MemoryMB) * 1024 * 1024
 		}
 
-		if c.conf.Resources.CPU > 0 {
+		if c.Conf.Resources.CPU > 0 {
 			hostConf.CPUPeriod = 100000
-			hostConf.CPUQuota = int64(100000 * c.conf.Resources.CPU)
+			hostConf.CPUQuota = int64(100000 * c.Conf.Resources.CPU)
 		}
 	}
 
 	hostConf.PortBindings = bindings
 	hostConf.Mounts = mounts
 
-	if len(c.conf.DNS) > 0 {
-		resolvPath, err := getResolvFile(c.conf.DNS)
+	if len(c.Conf.DNS) > 0 {
+		resolvPath, err := getResolvFile(c.Conf.DNS)
 		if err != nil {
 			return nil, err
 		}
@@ -329,11 +317,11 @@ func (c *container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 	}
 
 	ports := make(map[docker.Port]struct{})
-	for _, p := range c.conf.UsedPorts {
+	for _, p := range c.Conf.UsedPorts {
 		ports[docker.Port(p)] = struct{}{}
 	}
 
-	img := parseImage(c.conf.Image)
+	img := parseImage(c.Conf.Image)
 	if err := verifyLocalImageVersion(img); err != nil {
 		// we can proceed on several errors
 		switch err.(type) {
@@ -343,7 +331,7 @@ func (c *container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 			log.Warn().Msgf("failed to update local Docker image: %s", err)
 		}
 	}
-	name := c.conf.Name
+	name := c.Conf.Name
 	if name == "" {
 		name = uuid.New().String()
 	}
@@ -351,18 +339,18 @@ func (c *container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 	return &docker.CreateContainerOptions{
 		Name: name,
 		Config: &docker.Config{
-			User:         c.conf.User,
-			Image:        c.conf.Image,
+			User:         c.Conf.User,
+			Image:        c.Conf.Image,
 			Env:          env,
-			Cmd:          c.conf.Cmd,
-			Labels:       c.conf.Labels,
+			Cmd:          c.Conf.Cmd,
+			Labels:       c.Conf.Labels,
 			ExposedPorts: ports,
 		},
 		HostConfig: &hostConf,
 	}, nil
 }
 
-func (c *container) Create(ctx context.Context) error {
+func (c *Container) Create(ctx context.Context) error {
 	dconf, err := c.getCreateConfig()
 	if err != nil {
 		return err
@@ -374,7 +362,7 @@ func (c *container) Create(ctx context.Context) error {
 		return err
 	}
 
-	if !c.conf.UseBridge {
+	if !c.Conf.UseBridge {
 		if err := DefaultClient.DisconnectNetwork("bridge", docker.NetworkConnectionOptions{
 			Container: cont.ID,
 		}); err != nil {
@@ -384,51 +372,51 @@ func (c *container) Create(ctx context.Context) error {
 
 	log.Info().
 		Str("ID", cont.ID[0:8]).
-		Str("Image", c.conf.Image).
+		Str("Image", c.Conf.Image).
 		Msg("Created new container")
 
-	c.id = cont.ID
+	c.Id = cont.ID
 
 	return nil
 }
 
-func (c *container) Start(ctx context.Context) error {
-	if c.id == "" {
+func (c *Container) Start(ctx context.Context) error {
+	if c.Id == "" {
 		return ContNotCreatedErr
 	}
 
 	if c.state() == Suspended {
-		if err := DefaultClient.UnpauseContainer(c.id); err != nil {
+		if err := DefaultClient.UnpauseContainer(c.Id); err != nil {
 			return err
 		}
 	} else {
-		if err := DefaultClient.StartContainerWithContext(c.id, nil, ctx); err != nil {
+		if err := DefaultClient.StartContainerWithContext(c.Id, nil, ctx); err != nil {
 			return err
 		}
 	}
 
 	log.Debug().
-		Str("ID", c.id[0:8]).
-		Str("Image", c.conf.Image).
+		Str("ID", c.Id[0:8]).
+		Str("Image", c.Conf.Image).
 		Msg("Started container")
 
 	return nil
 }
 
-func (c *container) Suspend(ctx context.Context) error {
-	if err := DefaultClient.PauseContainer(c.id); err != nil {
-		log.Error().Str("ID", c.id[0:8]).Msgf("Failed to suspend container: %s", err)
+func (c *Container) Suspend(ctx context.Context) error {
+	if err := DefaultClient.PauseContainer(c.Id); err != nil {
+		log.Error().Str("ID", c.Id[0:8]).Msgf("Failed to suspend container: %s", err)
 		return err
 	}
 
 	log.Debug().
-		Str("ID", c.id[0:8]).
+		Str("ID", c.Id[0:8]).
 		Msg("Suspended container")
 
 	return nil
 }
 
-func (c *container) Run(ctx context.Context) error {
+func (c *Container) Run(ctx context.Context) error {
 	if err := c.Create(ctx); err != nil {
 		return err
 	}
@@ -436,21 +424,21 @@ func (c *container) Run(ctx context.Context) error {
 	return c.Start(ctx)
 }
 
-func (c *container) Stop() error {
-	if err := DefaultClient.StopContainer(c.id, 10); err != nil {
+func (c *Container) Stop() error {
+	if err := DefaultClient.StopContainer(c.Id, 10); err != nil {
 		return err
 	}
 
 	log.Debug().
-		Str("ID", c.id[0:8]).
-		Str("Image", c.conf.Image).
+		Str("ID", c.Id[0:8]).
+		Str("Image", c.Conf.Image).
 		Msg("Stopped container")
 
 	return nil
 }
 
-func (c *container) state() State {
-	cont, err := DefaultClient.InspectContainer(c.id)
+func (c *Container) state() State {
+	cont, err := DefaultClient.InspectContainer(c.Id)
 
 	if err != nil {
 		return Error
@@ -467,35 +455,35 @@ func (c *container) state() State {
 	return Stopped
 }
 
-func (c *container) Info() InstanceInfo {
+func (c *Container) Info() InstanceInfo {
 	return InstanceInfo{
-		Image: c.conf.Image,
+		Image: c.Conf.Image,
 		Type:  "docker",
 		Id:    c.ID()[0:12],
 		State: c.state(),
 	}
 }
 
-func (c *container) Close() error {
-	if c.network != nil {
-		for _, cont := range append(c.linked, c) {
-			DefaultClient.DisconnectNetwork(c.network.ID, docker.NetworkConnectionOptions{
-				Container: cont.ID(),
+func (c *Container) Close() error {
+	if c.Network != nil {
+		for _, cont := range append(c.Linked, c) {
+			DefaultClient.DisconnectNetwork(c.Network.ID, docker.NetworkConnectionOptions{
+				Container: cont.Id,
 			})
 		}
 
-		if err := DefaultClient.RemoveNetwork(c.network.ID); err != nil {
+		if err := DefaultClient.RemoveNetwork(c.Network.ID); err != nil {
 			return err
 		}
 	}
 
 	removeContOpts := docker.RemoveContainerOptions{
-		ID:            c.id,
+		ID:            c.Id,
 		RemoveVolumes: true,
 		Force:         true,
 	}
 
-	if err := DefaultLinkBridge.disconnect(c.id); err != nil {
+	if err := DefaultLinkBridge.disconnect(c.Id); err != nil {
 		return err
 	}
 
@@ -505,33 +493,25 @@ func (c *container) Close() error {
 	}
 
 	log.Debug().
-		Str("ID", c.id[0:8]).
-		Str("Image", c.conf.Image).
+		Str("ID", c.Id[0:8]).
+		Str("Image", c.Conf.Image).
 		Msg("Closed container")
 	return nil
 }
 
-func (c *container) BridgeAlias(alias string) (string, error) {
-	return DefaultLinkBridge.connect(c.id, alias)
+func (c *Container) BridgeAlias(alias string) (string, error) {
+	return DefaultLinkBridge.connect(c.Id, alias)
 }
 
 type Network struct {
-	net       *docker.Network
-	subnet    string
-	isVPN     bool
-	ipPool    map[uint]struct{}
-	connected []Identifier
+	Net       *docker.Network
+	Subnet    string
+	IsVPN     bool
+	IpPool    map[uint]struct{}
+	Connected []*Container
 }
 
-type NetworkHandler interface {
-	FormatIP(num int) string
-	Interface() string
-	SetIsVPN(bool)
-	Connect(c ContainerHandler, ip ...int) (int, error)
-	io.Closer
-}
-
-func NewNetwork(isVPN bool) (NetworkHandler, error) {
+func NewNetwork(isVPN bool) (*Network, error) {
 	sub, err := ipPool.Get()
 	if err != nil {
 		return nil, fmt.Errorf("ip pool get new network err %v", err)
@@ -572,43 +552,43 @@ func NewNetwork(isVPN bool) (NetworkHandler, error) {
 		ipPool[uint(i)] = struct{}{}
 	}
 
-	return &Network{net: netw, subnet: subnet, isVPN: isVPN, ipPool: ipPool}, nil
+	return &Network{Net: netw, Subnet: subnet, IsVPN: isVPN, IpPool: ipPool}, nil
 }
 
 func (n *Network) SetIsVPN(isVPN bool) {
-	n.isVPN = isVPN
+	n.IsVPN = isVPN
 }
 func (n *Network) Close() error {
-	for _, cont := range n.connected {
-		if err := DefaultClient.DisconnectNetwork(n.net.ID, docker.NetworkConnectionOptions{
-			Container: cont.ID(),
+	for _, cont := range n.Connected {
+		if err := DefaultClient.DisconnectNetwork(n.Net.ID, docker.NetworkConnectionOptions{
+			Container: cont.Id,
 		}); err != nil {
 			continue
 		}
 	}
 
-	return DefaultClient.RemoveNetwork(n.net.ID)
+	return DefaultClient.RemoveNetwork(n.Net.ID)
 }
 
 func (n *Network) FormatIP(num int) string {
-	return fmt.Sprintf("%s.%d", n.subnet[0:len(n.subnet)-5], num)
+	return fmt.Sprintf("%s.%d", n.Subnet[0:len(n.Subnet)-5], num)
 }
 
 func (n *Network) Interface() string {
 	var pDriver string
-	if n.isVPN {
+	if n.IsVPN {
 		pDriver = "br"
 		log.Info().Msg("Getting bridge interface from network.Interface function")
 	} else {
 		pDriver = "dm"
 		log.Info().Msg("Getting macvlan interface from network.Interface function")
 	}
-	return fmt.Sprintf("%s-%s", pDriver, n.net.ID[0:12])
+	return fmt.Sprintf("%s-%s", pDriver, n.Net.ID[0:12])
 }
 
 func (n *Network) getRandomIP() int {
-	for randDigit := range n.ipPool {
-		delete(n.ipPool, randDigit)
+	for randDigit := range n.IpPool {
+		delete(n.IpPool, randDigit)
 		return int(randDigit)
 	}
 	return 0
@@ -623,10 +603,10 @@ func (n *Network) releaseIP(ip string) {
 		return
 	}
 
-	n.ipPool[uint(num)] = struct{}{}
+	n.IpPool[uint(num)] = struct{}{}
 }
 
-func (n *Network) Connect(c ContainerHandler, ip ...int) (int, error) {
+func (n *Network) Connect(c *Container, ip ...int) (int, error) {
 	var lastDigit int
 
 	if len(ip) > 0 {
@@ -637,7 +617,7 @@ func (n *Network) Connect(c ContainerHandler, ip ...int) (int, error) {
 
 	ipAddr := n.FormatIP(lastDigit)
 
-	err := DefaultClient.ConnectNetwork(n.net.ID, docker.NetworkConnectionOptions{
+	err := DefaultClient.ConnectNetwork(n.Net.ID, docker.NetworkConnectionOptions{
 		Container: c.ID(),
 		EndpointConfig: &docker.EndpointConfig{
 			IPAMConfig: &docker.EndpointIPAMConfig{
@@ -654,7 +634,7 @@ func (n *Network) Connect(c ContainerHandler, ip ...int) (int, error) {
 		return lastDigit, err
 	}
 
-	n.connected = append(n.connected, c)
+	n.Connected = append(n.Connected, c)
 
 	return lastDigit, nil
 }

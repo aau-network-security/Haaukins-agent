@@ -20,18 +20,18 @@ type Lab struct {
 	DisabledExercises []string
 	DnsRecords        []*DNSRecord
 	DockerHost        virtual.Host
-	Network           virtual.NetworkHandler
+	Network           *virtual.Network
 	DnsServer         *dns.Server
 	DhcpServer        *dhcp.Server
 	DnsAddress        string
-	Vlib              virtual.VboxLibraryHandler
+	Vlib              *virtual.VboxLibrary
 	IsVPN             bool
 	GuacUsername      string
 	GuacPassword      string
 }
 
 type LabConf struct {
-	Vlib              virtual.VboxLibraryHandler
+	Vlib              *virtual.VboxLibrary
 	Frontends         []virtual.InstanceConfig
 	ExerciseConfs     []exercise.ExerciseConfig
 	DisabledExercises []string
@@ -42,6 +42,6 @@ type DNSRecord struct {
 }
 
 type FrontendConf struct {
-	vm   virtual.VmHandler
+	vm   *virtual.Vm
 	conf virtual.InstanceConfig
 }

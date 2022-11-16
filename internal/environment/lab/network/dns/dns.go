@@ -38,7 +38,7 @@ const (
 )
 
 type Server struct {
-	cont     virtual.ContainerHandler
+	cont     *virtual.Container
 	confFile string
 	io.Closer
 }
@@ -109,7 +109,7 @@ func New(records []RR) (*Server, error) {
 	}, nil
 }
 
-func (s *Server) Container() virtual.ContainerHandler {
+func (s *Server) Container() *virtual.Container {
 	return s.cont
 }
 
