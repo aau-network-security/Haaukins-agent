@@ -10,13 +10,13 @@ import (
 )
 
 type IPTables struct {
-	sudo bool
+	Sudo bool
 
-	// flags to service
-	flags []string
+	// Flags to service
+	Flags []string
 
-	// enable debug or not
-	debug bool
+	// enable Debug or not
+	Debug bool
 
 	// Implementation of ExecFunc.
 	execFunc ExecFunc
@@ -112,10 +112,10 @@ func (ipTab *IPTables) execute(args ...string) ([]byte, error) {
 
 // exec executes an ExecFunc using 'iptables'.
 func (ipTab *IPTables) exec(cmd string, args ...string) ([]byte, error) {
-	flags := append(ipTab.flags, args...)
+	flags := append(ipTab.Flags, args...)
 
 	// If needed, prefix sudo.
-	if ipTab.sudo {
+	if ipTab.Sudo {
 		flags = append([]string{cmd}, flags...)
 		cmd = "sudo"
 	}
