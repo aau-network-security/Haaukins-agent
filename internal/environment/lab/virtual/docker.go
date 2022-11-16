@@ -210,9 +210,6 @@ func GetRedisContainer(mountPath string) (*Container, error) {
 
 	return c, nil
 }
-func (c *Container) ID() string {
-	return c.Id
-}
 
 func (c *Container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 	var env []string
@@ -459,7 +456,7 @@ func (c *Container) Info() InstanceInfo {
 	return InstanceInfo{
 		Image: c.Conf.Image,
 		Type:  "docker",
-		Id:    c.ID()[0:12],
+		Id:    c.Id[0:12],
 		State: c.state(),
 	}
 }
@@ -618,7 +615,7 @@ func (n *Network) Connect(c *Container, ip ...int) (int, error) {
 	ipAddr := n.FormatIP(lastDigit)
 
 	err := DefaultClient.ConnectNetwork(n.Net.ID, docker.NetworkConnectionOptions{
-		Container: c.ID(),
+		Container: c.Id,
 		EndpointConfig: &docker.EndpointConfig{
 			IPAMConfig: &docker.EndpointIPAMConfig{
 				IPv4Address: ipAddr,
