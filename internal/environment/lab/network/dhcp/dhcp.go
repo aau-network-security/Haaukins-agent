@@ -15,10 +15,10 @@ import (
 )
 
 type Server struct {
-	cont     *virtual.Container
-	confFile string
-	dns      string
-	subnet   string
+	Cont     *virtual.Container
+	ConfFile string
+	Dns      string
+	Subnet   string
 }
 
 // TODO add comments
@@ -69,40 +69,40 @@ func New(format func(n int) string) (*Server, error) {
 	})
 
 	return &Server{
-		cont:     cont,
-		confFile: confFile,
-		dns:      dns,
-		subnet:   subnet,
+		Cont:     cont,
+		ConfFile: confFile,
+		Dns:      dns,
+		Subnet:   subnet,
 	}, nil
 }
 
 func (dhcp *Server) Container() *virtual.Container {
-	return dhcp.cont
+	return dhcp.Cont
 }
 
 func (dhcp *Server) Run(ctx context.Context) error {
-	return dhcp.cont.Run(ctx)
+	return dhcp.Cont.Run(ctx)
 }
 
 func (dhcp *Server) Close() error {
-	if err := os.Remove(dhcp.confFile); err != nil {
+	if err := os.Remove(dhcp.ConfFile); err != nil {
 		return err
 	}
 
-	if err := dhcp.cont.Close(); err != nil {
+	if err := dhcp.Cont.Close(); err != nil {
 		return err
 	}
 
 	return nil
 }
 func (dhcp *Server) LabSubnet() string {
-	return dhcp.subnet
+	return dhcp.Subnet
 }
 
 func (dhcp *Server) LabDNS() string {
-	return dhcp.dns
+	return dhcp.Dns
 }
 
 func (dhcp *Server) Stop() error {
-	return dhcp.cont.Stop()
+	return dhcp.Cont.Stop()
 }

@@ -148,7 +148,12 @@ func New(conf *Config) (*Agent, error) {
 		// Didn't detect the redis container, starting a new one...
 		log.Info().Msg("No redis container detected, creating a new one")
 		container = virtual.NewContainer(virtual.ContainerConfig{
-			Image:     "redis:7.0.4",
+			Image: "redislabs/rejson:2.4.1",
+			// Cmd: []string{
+			// 	"/data/redis.conf",
+			// 	"--loadmodule",
+			// 	"/usr/lib/redis/modules/rejson.so",
+			// },
 			Name:      "redis_cache",
 			UseBridge: true,
 			Mounts: []string{
@@ -184,24 +189,39 @@ func New(conf *Config) (*Agent, error) {
 	workerPool := worker.NewWorkerPool(conf.MaxWorkers)
 	workerPool.Run()
 
+	redis := state.RedisCache{
+		Host: "127.0.0.1:6379",
+		DB:   0,
+	}
+
+	vlib := virtual.NewLibrary(conf.OvaDir)
+
+	envPool, err := redis.ResumeState(vlib, workerPool)
+	if err != nil {
+		log.Error().Err(err).Msg("error resuming state")
+		envPool = &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
+		}
+	}
+	if envPool == nil {
+		envPool = &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
+		}
+	}
 	// Creating agent struct
 	a := &Agent{
 		initialized: initialized,
 		config:      conf,
-		redis: state.RedisCache{
-			Host: "127.0.0.1:6379",
-			DB:   0,
-		},
-		workerPool: workerPool,
-		vlib:       virtual.NewLibrary(conf.OvaDir),
-		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs:    make(chan pb.Lab, 100),
-		ExClient:   exClient,
-		EnvPool: &env.EnvPool{
-			M:    &sync.RWMutex{},
-			Envs: make(map[string]*env.Environment),
-		},
-		State: &state.State{},
+		redis:       redis,
+		workerPool:  workerPool,
+		vlib:        vlib,
+		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs:     make(chan pb.Lab, 100),
+		ExClient:    exClient,
+		EnvPool:     envPool,
+		State:       &state.State{},
 	}
 	return a, nil
 }

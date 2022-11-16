@@ -30,10 +30,10 @@ type Environment struct {
 	// Fill out rest when starting to make labs
 }
 
-type status uint8
+type Status uint8
 
 const (
-	StatusRunning status = iota
+	StatusRunning Status = iota
 	StatusUpdating
 	StatusClosing
 	StatusClosed
@@ -47,7 +47,7 @@ type EnvConfig struct {
 	VpnConfig       wg.WireGuardConfig
 	WorkerPool      worker.WorkerPool
 	LabConf         lab.LabConf
-	Status          status
+	Status          Status
 }
 
 type Category struct {

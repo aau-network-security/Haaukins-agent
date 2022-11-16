@@ -122,7 +122,7 @@ func (l *Lab) Start(ctx context.Context) error {
 	}
 
 	for _, fconf := range l.Frontends {
-		if err := fconf.vm.Start(ctx); err != nil {
+		if err := fconf.Vm.Start(ctx); err != nil {
 			return err
 		}
 	}
@@ -132,6 +132,7 @@ func (l *Lab) Start(ctx context.Context) error {
 func (l *Lab) Close() error {
 	var wg sync.WaitGroup
 	for _, lab := range l.Frontends {
+		log.Debug().Msgf("lab: %v", lab)
 		wg.Add(1)
 		go func(vm *virtual.Vm) {
 			// closing VMs....
@@ -139,7 +140,7 @@ func (l *Lab) Close() error {
 			if err := vm.Close(); err != nil {
 				log.Error().Msgf("Error on Close function in lab.go %s", err)
 			}
-		}(lab.vm)
+		}(lab.Vm)
 	}
 	wg.Add(1)
 	go func() {
@@ -253,8 +254,8 @@ func (l *Lab) addFrontend(ctx context.Context, conf virtual.InstanceConfig, rdpP
 	}
 
 	l.Frontends[rdpPort] = FrontendConf{
-		vm:   vm,
-		conf: conf,
+		Vm:   vm,
+		Conf: conf,
 	}
 
 	log.Debug().Msgf("Created lab frontend on port %d", rdpPort)
@@ -276,7 +277,7 @@ func (l *Lab) RdpConnPorts() []uint {
 func (l *Lab) InstanceInfo() []virtual.InstanceInfo {
 	var instances []virtual.InstanceInfo
 	for _, fconf := range l.Frontends {
-		instances = append(instances, fconf.vm.Info())
+		instances = append(instances, fconf.Vm.Info())
 	}
 	for _, e := range l.Exercises {
 		instances = append(instances, e.InstanceInfo()...)

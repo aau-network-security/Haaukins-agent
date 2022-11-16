@@ -40,8 +40,8 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 	}
 
 	ipT := IPTables{
-		sudo:     true,
-		execFunc: shellExec,
+		Sudo:     true,
+		ExecFunc: ShellExec,
 	}
 
 	dockerHost := virtual.NewHost()

@@ -38,8 +38,8 @@ const (
 )
 
 type Server struct {
-	cont     *virtual.Container
-	confFile string
+	Cont     *virtual.Container
+	ConfFile string
 	io.Closer
 }
 
@@ -104,25 +104,25 @@ func New(records []RR) (*Server, error) {
 	})
 
 	return &Server{
-		cont:     cont,
-		confFile: confFile,
+		Cont:     cont,
+		ConfFile: confFile,
 	}, nil
 }
 
 func (s *Server) Container() *virtual.Container {
-	return s.cont
+	return s.Cont
 }
 
 func (s *Server) Run(ctx context.Context) error {
-	return s.cont.Run(ctx)
+	return s.Cont.Run(ctx)
 }
 
 func (s *Server) Close() error {
-	if err := os.Remove(s.confFile); err != nil {
+	if err := os.Remove(s.ConfFile); err != nil {
 		log.Warn().Msgf("error while removing DNS configuration file: %s", err)
 	}
 
-	if err := s.cont.Close(); err != nil {
+	if err := s.Cont.Close(); err != nil {
 		log.Warn().Msgf("error while closing DNS container: %s", err)
 	}
 
@@ -130,5 +130,5 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) Stop() error {
-	return s.cont.Stop()
+	return s.Cont.Stop()
 }

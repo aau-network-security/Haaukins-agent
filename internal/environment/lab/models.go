@@ -42,6 +42,6 @@ type DNSRecord struct {
 }
 
 type FrontendConf struct {
-	vm   *virtual.Vm
-	conf virtual.InstanceConfig
+	Vm   *virtual.Vm
+	Conf virtual.InstanceConfig
 }

@@ -75,33 +75,33 @@ func (err *VBoxErr) Error() string {
 // }
 
 type VboxLibrary struct {
-	m     sync.Mutex
-	pwd   string
-	known map[string]*Vm
-	locks map[string]*sync.Mutex
+	M     sync.Mutex
+	Pwd   string
+	Known map[string]*Vm
+	Locks map[string]*sync.Mutex
 }
 
 // VM information is stored in a struct
 type Vm struct {
-	id      string
-	path    string
-	image   string
+	Id      string
+	Path    string
+	Image   string
 	opts    []VMOpt
-	running bool
+	Running bool
 }
 
 func NewVMWithSum(path, image string, checksum string, vmOpts ...VMOpt) *Vm {
 	return &Vm{
-		path:  path,
-		image: image,
+		Path:  path,
+		Image: image,
 		opts:  vmOpts,
-		id:    fmt.Sprintf("%s{%s}", image, checksum),
+		Id:    fmt.Sprintf("%s{%s}", image, checksum),
 	}
 }
 
 // Creating VM
 func (vm *Vm) Create(ctx context.Context) error {
-	_, err := VBoxCmdContext(ctx, "import", vm.path, "--vsys", "0", "--eula", "accept", "--vmname", vm.id)
+	_, err := VBoxCmdContext(ctx, "import", vm.Path, "--vsys", "0", "--eula", "accept", "--vmname", vm.Id)
 	if err != nil {
 		return err
 	}
@@ -125,39 +125,39 @@ func (vm *Vm) Run(ctx context.Context) error {
 }
 
 func (vm *Vm) Start(ctx context.Context) error {
-	_, err := VBoxCmdContext(ctx, vboxStartVM, vm.id, "--type", "headless")
+	_, err := VBoxCmdContext(ctx, vboxStartVM, vm.Id, "--type", "headless")
 	if err != nil {
 		return err
 	}
 
-	vm.running = true
+	vm.Running = true
 
 	log.Debug().
-		Str("ID", vm.id).
+		Str("ID", vm.Id).
 		Msg("Started VM")
 
 	log.Debug().
-		Str("ID", vm.id).
+		Str("ID", vm.Id).
 		Msg("Setting resolution for VM")
-	_, err = VBoxCmdContext(ctx, vboxCtrlVM, vm.id, "setvideomodehint", "1920", "1080", "16")
+	_, err = VBoxCmdContext(ctx, vboxCtrlVM, vm.Id, "setvideomodehint", "1920", "1080", "16")
 	if err != nil {
-		log.Error().Str("ID", vm.id).Msgf("Error setting resolution, VM may require reset on after connecting: %s", err.Error())
+		log.Error().Str("ID", vm.Id).Msgf("Error setting resolution, VM may require reset on after connecting: %s", err.Error())
 	}
 
 	return nil
 }
 
 func (vm *Vm) Stop() error {
-	_, err := VBoxCmdContext(context.Background(), vboxCtrlVM, vm.id, "poweroff")
+	_, err := VBoxCmdContext(context.Background(), vboxCtrlVM, vm.Id, "poweroff")
 	if err != nil {
 		log.Error().Msgf("Error while shutting down VM %s", err)
 		return err
 	}
 
-	vm.running = false
+	vm.Running = false
 
 	log.Debug().
-		Str("ID", vm.id).
+		Str("ID", vm.Id).
 		Msg("Stopped VM")
 
 	return nil
@@ -165,16 +165,16 @@ func (vm *Vm) Stop() error {
 
 // Will call savestate on vm
 func (vm *Vm) Suspend(ctx context.Context) error {
-	_, err := VBoxCmdContext(ctx, vboxCtrlVM, vm.id, "savestate")
+	_, err := VBoxCmdContext(ctx, vboxCtrlVM, vm.Id, "savestate")
 	if err != nil {
 		log.Error().
-			Str("ID", vm.id).
+			Str("ID", vm.Id).
 			Msgf("Failed to suspend VM: %v", err)
 		return err
 	}
 
 	log.Debug().
-		Str("ID", vm.id).
+		Str("ID", vm.Id).
 		Msgf("Suspended vm")
 
 	return nil
@@ -184,20 +184,20 @@ func (vm *Vm) Close() error {
 	_, err := vm.ensureStopped(nil)
 	if err != nil {
 		log.Warn().
-			Str("ID", vm.id).
+			Str("ID", vm.Id).
 			Msgf("Failed to stop VM: %s", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err = VBoxCmdContext(ctx, vboxUnregisterVM, vm.id, "--delete")
+	_, err = VBoxCmdContext(ctx, vboxUnregisterVM, vm.Id, "--delete")
 	if err != nil {
 		return err
 	}
 
 	log.Debug().
-		Str("ID", vm.id).
+		Str("ID", vm.Id).
 		Msg("Closed VM")
 
 	return nil
@@ -206,14 +206,14 @@ func (vm *Vm) Close() error {
 type VMOpt func(context.Context, *Vm) error
 
 func removeAllNICs(ctx context.Context, vm *Vm) error {
-	result, err := VBoxCmdContext(ctx, vboxShowVMInfo, vm.id)
+	result, err := VBoxCmdContext(ctx, vboxShowVMInfo, vm.Id)
 	if err != nil {
 		return err
 	}
 	re := regexp.MustCompile(nicRegex)
 	numberOfNICs := re.FindAll(result, -1)
 	for i := 1; i <= len(numberOfNICs); i++ {
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--nic"+strconv.Itoa(i), "none")
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--nic"+strconv.Itoa(i), "none")
 		if err != nil {
 			return err
 		}
@@ -228,12 +228,12 @@ func SetBridge(nic string) VMOpt {
 			return err
 		}
 		// enables specified NIC card in purpose
-		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--nic1", "bridged", "--bridgeadapter1", nic)
+		_, err := VBoxCmdContext(ctx, vboxModVM, vm.Id, "--nic1", "bridged", "--bridgeadapter1", nic)
 		if err != nil {
 			return err
 		}
 		// allows promiscuous mode
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--nicpromisc1", "allow-all")
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--nicpromisc1", "allow-all")
 		if err != nil {
 			return err
 		}
@@ -244,37 +244,37 @@ func SetBridge(nic string) VMOpt {
 
 func SetLocalRDP(ip string, port uint) VMOpt {
 	return func(ctx context.Context, vm *Vm) error {
-		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--vrde", "on")
+		_, err := VBoxCmdContext(ctx, vboxModVM, vm.Id, "--vrde", "on")
 		if err != nil {
 			return err
 		}
 
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--vrdeproperty", fmt.Sprintf("TCP/Address=%s", ip))
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--vrdeproperty", fmt.Sprintf("TCP/Address=%s", ip))
 		if err != nil {
 			return err
 		}
 
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--vrdeproperty", fmt.Sprintf("TCP/Ports=%d", port))
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--vrdeproperty", fmt.Sprintf("TCP/Ports=%d", port))
 		if err != nil {
 			return err
 		}
 
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--vrdeauthtype", "null")
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--vrdeauthtype", "null")
 		if err != nil {
 			return err
 		}
 
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--vram", "128")
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--vram", "128")
 		if err != nil {
 			return err
 		}
 
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--clipboard", "bidirectional")
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--clipboard", "bidirectional")
 		if err != nil {
 			return err
 		}
 
-		_, err = VBoxCmdContext(ctx, vboxModVM, vm.id, "--vrdemulticon", "on")
+		_, err = VBoxCmdContext(ctx, vboxModVM, vm.Id, "--vrdemulticon", "on")
 		if err != nil {
 			return err
 		}
@@ -285,21 +285,22 @@ func SetLocalRDP(ip string, port uint) VMOpt {
 
 func SetCPU(cores uint) VMOpt {
 	return func(ctx context.Context, vm *Vm) error {
-		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--cpus", fmt.Sprintf("%d", cores))
+		_, err := VBoxCmdContext(ctx, vboxModVM, vm.Id, "--cpus", fmt.Sprintf("%d", cores))
 		return err
 	}
 }
 
 func SetRAM(mb uint) VMOpt {
 	return func(ctx context.Context, vm *Vm) error {
-		_, err := VBoxCmdContext(ctx, vboxModVM, vm.id, "--memory", fmt.Sprintf("%d", mb))
+		_, err := VBoxCmdContext(ctx, vboxModVM, vm.Id, "--memory", fmt.Sprintf("%d", mb))
 		return err
 	}
 }
 
 func (vm *Vm) ensureStopped(ctx context.Context) (func(), error) {
-	wasRunning := vm.running
-	if vm.running {
+	log.Debug().Msgf("vm: %v", vm)
+	wasRunning := vm.Running
+	if vm.Running {
 		if err := vm.Stop(); err != nil {
 			return nil, err
 		}
@@ -315,7 +316,7 @@ func (vm *Vm) Snapshot(name string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := VBoxCmdContext(ctx, "snapshot", vm.id, "take", name)
+	_, err := VBoxCmdContext(ctx, "snapshot", vm.Id, "take", name)
 	if err != nil {
 		return err
 	}
@@ -325,14 +326,14 @@ func (vm *Vm) Snapshot(name string) error {
 
 func (v *Vm) LinkedClone(ctx context.Context, snapshot string, vmOpts ...VMOpt) (*Vm, error) {
 	newID := strings.Replace(uuid.New().String(), "-", "", -1)
-	_, err := VBoxCmdContext(ctx, "clonevm", v.id, "--snapshot", snapshot, "--options", "link", "--name", newID, "--register")
+	_, err := VBoxCmdContext(ctx, "clonevm", v.Id, "--snapshot", snapshot, "--options", "link", "--name", newID, "--register")
 	if err != nil {
 		return nil, err
 	}
 
 	vm := &Vm{
-		image: v.image,
-		id:    newID,
+		Image: v.Image,
+		Id:    newID,
 	}
 	for _, opt := range vmOpts {
 		if err := opt(ctx, vm); err != nil {
@@ -347,7 +348,7 @@ func (v *Vm) state() State {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	raw, err := VBoxCmdContext(ctx, vboxShowVMInfo, v.id)
+	raw, err := VBoxCmdContext(ctx, vboxShowVMInfo, v.Id)
 	if err != nil {
 		return Error
 	}
@@ -369,24 +370,24 @@ func (v *Vm) state() State {
 
 func (v *Vm) Info() InstanceInfo {
 	return InstanceInfo{
-		Image: v.image,
+		Image: v.Image,
 		Type:  "vbox",
-		Id:    v.id,
+		Id:    v.Id,
 		State: v.state(),
 	}
 }
 
 func NewLibrary(pwd string) *VboxLibrary {
 	return &VboxLibrary{
-		pwd:   pwd,
-		known: make(map[string]*Vm),
-		locks: make(map[string]*sync.Mutex),
+		Pwd:   pwd,
+		Known: make(map[string]*Vm),
+		Locks: make(map[string]*sync.Mutex),
 	}
 }
 
 func (lib *VboxLibrary) GetImagePath(file string) string {
-	if !strings.HasPrefix(file, lib.pwd) {
-		file = filepath.Join(lib.pwd, file)
+	if !strings.HasPrefix(file, lib.Pwd) {
+		file = filepath.Join(lib.Pwd, file)
 	}
 
 	if !strings.HasSuffix(file, ".ova") {
@@ -399,12 +400,12 @@ func (lib *VboxLibrary) GetImagePath(file string) string {
 func (lib *VboxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts ...VMOpt) (*Vm, error) {
 	path := lib.GetImagePath(conf.Image)
 
-	lib.m.Lock()
+	lib.M.Lock()
 
-	pathLock, ok := lib.locks[path]
+	pathLock, ok := lib.Locks[path]
 	if !ok {
 		pathLock = &sync.Mutex{}
-		lib.locks[path] = pathLock
+		lib.Locks[path] = pathLock
 	}
 
 	log.Debug().
@@ -412,12 +413,12 @@ func (lib *VboxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts
 		Bool("first_time", ok == false).
 		Msg("getting path lock")
 
-	lib.m.Unlock()
+	lib.M.Unlock()
 
 	pathLock.Lock()
 	defer pathLock.Unlock()
 
-	vm, ok := lib.known[path]
+	vm, ok := lib.Known[path]
 	if ok {
 		return vm.LinkedClone(ctx, "origin", vmOpts...) // if ok==true then VM will be linked without the ram value which is exist on configuration file
 		// vbox.SetRAM(conf.memoryMB) on addFrontend function in lab.go fixes the problem...
@@ -443,9 +444,9 @@ func (lib *VboxLibrary) GetCopy(ctx context.Context, conf InstanceConfig, vmOpts
 		}
 	}
 
-	lib.m.Lock()
-	lib.known[path] = vm
-	lib.m.Unlock()
+	lib.M.Lock()
+	lib.Known[path] = vm
+	lib.M.Unlock()
 
 	if conf.CPU != 0 {
 		vmOpts = append(vmOpts, SetCPU(uint(math.Ceil(conf.CPU))))
@@ -502,8 +503,8 @@ func VmExists(image string, checksum string) (*Vm, bool) {
 
 	if bytes.Contains(out, []byte("\""+name+"\"")) {
 		return &Vm{
-			image: image,
-			id:    name,
+			Image: image,
+			Id:    name,
 		}, true
 	}
 

@@ -4,9 +4,10 @@ import (
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dhcp"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	docker "github.com/fsouza/go-dockerclient"
 )
 
 // The state models are somewhat of a copy of the models from the env, lab, exercise packages etc.
@@ -34,20 +35,21 @@ type EnvConfig struct {
 	VPNEndpointPort int
 	VpnConfig       wg.WireGuardConfig
 	LabConf         LabConf
+	Status          env.Status
 }
 
 type Lab struct {
 	Tag               string
 	Type              lab.LabType
-	Frontends         map[string]FrontendConf
+	Frontends         map[string]lab.FrontendConf
 	ExTags            map[string]Exercise
 	Exercises         []Exercise
 	ExerciseConfigs   []exercise.ExerciseConfig
 	DisabledExercises []string
-	DnsRecords        []lab.DNSRecord
-	Network           Network
-	DnsServer         DnsServer
-	DhcpServer        DhcpServer
+	DnsRecords        []*lab.DNSRecord
+	Network           *virtual.Network
+	DnsServer         *dns.Server
+	DhcpServer        *dhcp.Server
 	DnsAddress        string
 	IsVPN             bool
 	GuacUsername      string
@@ -64,28 +66,18 @@ type Exercise struct {
 	ContainerOpts []exercise.ContainerOptions
 	VboxOpts      []exercise.ExerciseInstanceConfig
 	Tag           string
-	Net           Network
+	Net           *virtual.Network
 	DnsAddr       string
 	DnsRecords    []exercise.RecordConfig
 	Ips           []int
-	Vms           []Vm
-	Containers    []Container
-}
-
-type DnsServer struct {
-	Cont     Container
-	ConfFile string
-}
-
-type DhcpServer struct {
-	Cont     Container
-	ConfFile string
-	Dns      string
-	Subnet   string
+	Containers    []*virtual.Container
+	Vms           []*virtual.Vm
+	// Vms           []Vm
+	// Containers    []Container
 }
 
 type Network struct {
-	Net       docker.Network
+	Net       virtual.Network
 	Subnet    string
 	IsVPN     bool
 	Connected []string
@@ -107,19 +99,19 @@ type Guacamole struct {
 	Token      string
 	Port       uint
 	AdminPass  string
-	Containers map[string]Container
+	Containers map[string]*virtual.Container
 }
 
 type Container struct {
 	Id      string
 	Conf    virtual.ContainerConfig
-	Network docker.Network
+	Network virtual.Network
 }
 
 type IPTables struct {
-	sudo  bool
-	flags []string
-	debug bool
+	Sudo  bool
+	Flags []string
+	Debug bool
 }
 
 type State struct {
