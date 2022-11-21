@@ -238,3 +238,5 @@ func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
+
+// TODO Add reset vm call
