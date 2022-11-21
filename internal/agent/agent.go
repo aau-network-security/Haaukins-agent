@@ -60,7 +60,7 @@ func NewConfigFromFile(path string) (*Config, error) {
 	}
 
 	if c.GrpcPort == 0 {
-		log.Debug().Msg("port not provided in the configuration file")
+		log.Debug().Int("port",50095).Msg("port not provided in the configuration file using default")
 		c.GrpcPort = 50095
 	}
 

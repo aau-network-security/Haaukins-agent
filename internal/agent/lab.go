@@ -33,7 +33,6 @@ func (a *Agent) LabStream(req *proto.Empty, stream proto.Agent_LabStreamServer) 
 }
 
 // TODO: Rethink func name as this should be the function that configures a lab for a user
-// TODO: Handle assignment (Guac connection and VPN configs here)
 func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest) (*proto.StatusResponse, error) {
 	a.EnvPool.M.RLock()
 	env, ok := a.EnvPool.Envs[req.EventTag]
@@ -229,7 +228,8 @@ func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 
 	ctx = context.Background()
 	if err := l.ResetExercise(ctx, req.Exercise); err != nil {
-		return nil, fmt.Errorf("error resetting exercise: %v", err)
+		log.Error().Err(err).Msg("error resetting exercise")
+		return nil, errors.New("error resetting exercise")
 	}
 
 	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {

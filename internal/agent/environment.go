@@ -128,7 +128,7 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 	vpnIPPool.ReleaseIP(vpnIP)
 
 	if err := virtual.RemoveEventFolder(string(envConf.Tag)); err != nil {
-		//do nothing
+		log.Warn().Err(err).Msg("error removing event folder")
 	}
 
 	if err := env.Close(); err != nil {

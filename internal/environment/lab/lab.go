@@ -133,7 +133,6 @@ func (l *Lab) Start(ctx context.Context) error {
 func (l *Lab) Close() error {
 	var wg sync.WaitGroup
 	for _, lab := range l.Frontends {
-		log.Debug().Msgf("lab: %v", lab)
 		wg.Add(1)
 		go func(vm *virtual.Vm) {
 			// closing VMs....

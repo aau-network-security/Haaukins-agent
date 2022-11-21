@@ -68,8 +68,6 @@ type Exercise struct {
 	Ips           []int
 	Containers    []*virtual.Container
 	Vms           []*virtual.Vm
-	// Vms           []Vm
-	// Containers    []Container
 }
 
 type Network struct {

@@ -35,6 +35,7 @@ func (ge *GuacError) Error() string {
 	return fmt.Sprintf("guacamole: trying to %s. failed: %s", ge.action, ge.err)
 }
 
+// Creates a new Guacamole struct for an environment.
 func NewGuac(ctx context.Context, eventTag string) (Guacamole, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
@@ -63,13 +64,16 @@ func NewGuac(ctx context.Context, eventTag string) (Guacamole, error) {
 Creates the necessary containers for guacamole and configures the instance with a new admin password
 */
 func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
-	_ = virtual.CreateEventFolder(eventTag)
+	if err := virtual.CreateEventFolder(eventTag); err != nil {
+		log.Warn().Err(err).Msg("error creating event folder, filetransfer may not be available for this event on this agent")
+	}
 
 	// If user is not specified, filetransfer mount is owned by root, and can therefore not be accessed by vbox vm
 	user := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 	log.Debug().Str("user", user).Msg("starting guacd")
 
 	containers := map[string]*virtual.Container{}
+
 	containers["guacd"] = virtual.NewContainer(virtual.ContainerConfig{
 		Image:     "guacamole/guacd:1.4.0",
 		UseBridge: true,
@@ -81,6 +85,7 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 		},
 		User: user,
 	})
+
 	mysqlPass := uuid.New().String()
 	log.Debug().Str("mysqlPass", mysqlPass).Msg("mysql pw for guac")
 	containers["db"] = virtual.NewContainer(virtual.ContainerConfig{
@@ -164,6 +169,7 @@ func (guac *Guacamole) Close() error {
 	return nil
 }
 
+// Connects VMs in a lab to the corresponding guacamole instance for the environment.
 func (env *Environment) CreateGuacConn(lab lab.Lab) error {
 	enableWallPaper := true
 	enableDrive := true

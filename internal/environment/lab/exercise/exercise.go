@@ -146,6 +146,7 @@ func (e *Exercise) Start(ctx context.Context) error {
 	return res
 }
 
+// TODO: Add multierror or go routine
 func (e *Exercise) Stop(ctx context.Context) error {
 	for _, m := range e.Machines {
 		if err := m.Stop(); err != nil {
