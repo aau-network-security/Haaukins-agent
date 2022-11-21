@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -92,11 +91,10 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
 					return
 				}
-				
+
 				if err := env.CreateGuacConn(lab); err != nil {
 					log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
 				}
-				
 
 				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
 				// If lab was created while running CloseEnvironment, close the lab
@@ -160,12 +158,6 @@ func (env *Environment) Start(ctx context.Context) error {
 		// Continue without vpn if err is present
 		// TODO If vpn is for some reason not initialized, it should be possible to try to reininialize for this specific agent and environment
 		log.Error().Err(err).Msg("error initializing vpn endpoint... \n continueing wihout, reininialize from admin webclient")
-	}
-
-	// Start the guac containers
-	if err := env.Guac.Start(ctx); err != nil {
-		log.Error().Err(err).Msg("error starting guac")
-		return errors.New("error while starting guac")
 	}
 
 	env.EnvConfig.Status = StatusRunning

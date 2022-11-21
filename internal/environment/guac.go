@@ -153,7 +153,6 @@ func (guac *Guacamole) create(ctx context.Context, eventTag string) error {
 	}
 
 	guac.Containers = containers
-	guac.Stop()
 
 	return nil
 }
@@ -589,24 +588,6 @@ func (guac *Guacamole) authAction(action string, a func(string) (*http.Response,
 		}
 	}
 
-	return nil
-}
-
-func (guac *Guacamole) Stop() error {
-	for _, container := range guac.Containers {
-		if err := container.Stop(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (guac *Guacamole) Start(ctx context.Context) error {
-	for _, container := range guac.Containers {
-		if err := container.Start(ctx); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
