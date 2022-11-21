@@ -18,6 +18,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Saves the current state of the environment pool to a state.json file.
+// Should be called whenever any changes to the environment pool is made
 func SaveState(envPool *environment.EnvPool, statePath string) error {
 
 	state := State{
@@ -33,8 +35,8 @@ func SaveState(envPool *environment.EnvPool, statePath string) error {
 		log.Error().Err(err).Msg("error marshalling state")
 		return err
 	}
+
 	path := filepath.Join(statePath, "state.json")
-	log.Debug().Str("path", path).Msg("path to state.json")
 	if err := os.WriteFile(path, jsonState, 0644); err != nil {
 		return err
 	}
@@ -42,11 +44,11 @@ func SaveState(envPool *environment.EnvPool, statePath string) error {
 	return nil
 }
 
+// Resumes from a saves state, which means it reasembles the environment pool in order to restore it across ex. restarts
 func ResumeState(vlib *virtual.VboxLibrary, workerPool worker.WorkerPool, statePath string) (*environment.EnvPool, error) {
 	state := State{}
 
 	path := filepath.Join(statePath, "state.json")
-	log.Debug().Str("path", path).Msg("path to state.json")
 	stateStr, err := os.ReadFile(path)
 	if stateStr == nil || err != nil {
 		return nil, nil
@@ -85,7 +87,7 @@ func ResumeState(vlib *virtual.VboxLibrary, workerPool worker.WorkerPool, stateP
 	return envPool, nil
 }
 
-// TODO: end by defining the return value instead
+// Converts the environment state (state.Environment) from the state.json file into the type environment.Environment to be inserted to the environment pool
 func convertEnvState(envState Environment, vlib *virtual.VboxLibrary, workerPool worker.WorkerPool) (*environment.Environment, error) {
 	env := &environment.Environment{
 		M:       &sync.RWMutex{},
@@ -116,7 +118,7 @@ func convertEnvState(envState Environment, vlib *virtual.VboxLibrary, workerPool
 	client := &http.Client{
 		Jar: jar,
 	}
-	log.Debug().Uint("port", envState.Guac.Port).Msg("port after resuming state")
+
 	env.Guac = environment.Guacamole{
 		Client:     client,
 		Token:      envState.Guac.Token,
@@ -158,6 +160,7 @@ func convertEnvState(envState Environment, vlib *virtual.VboxLibrary, workerPool
 	return env, nil
 }
 
+// For each lab in the environment state, it converts from state.Lab to lab.Lab type
 func convertLabState(l Lab, vlib *virtual.VboxLibrary) (*lab.Lab, error) {
 	resumedLab := &lab.Lab{
 		M:         &sync.RWMutex{},
@@ -209,7 +212,7 @@ func convertLabState(l Lab, vlib *virtual.VboxLibrary) (*lab.Lab, error) {
 	return resumedLab, nil
 }
 
-// TODO: Make functions to assemble the state based on the environmentPool
+// Takes an environment from the environment pool and makes it into a serializable state.Environment object
 func makeEnvState(env *environment.Environment) Environment {
 	envState := Environment{
 		IpRules: make(map[string]environment.IpRules),
@@ -254,6 +257,7 @@ func makeEnvState(env *environment.Environment) Environment {
 	return envState
 }
 
+// Takes a lab from an environment in the environment pool and makes it into a serializable state.Lab object
 func makeLabState(l *lab.Lab) Lab {
 	labState := Lab{
 		Frontends: make(map[string]lab.FrontendConf),
