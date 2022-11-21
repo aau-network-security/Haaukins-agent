@@ -22,6 +22,7 @@ func (a *Agent) LabStream(req *proto.Empty, stream proto.Agent_LabStreamServer) 
 		select {
 		case lab := <-a.newLabs:
 			log.Debug().Msg("Lab in new lab channel, sending to client...")
+			// Saving state since new lab in channel means new lab in environment
 			if err := a.redis.SaveState(a.EnvPool); err != nil {
 				log.Error().Err(err).Msg("error saving state")
 			}
@@ -122,9 +123,11 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 	log.Debug().Str("envKey", envKey[0]).Msg("env for lab")
 
 	delete(a.EnvPool.Envs[envKey[0]].Labs, req.LabTag)
+
 	if err := a.redis.SaveState(a.EnvPool); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
@@ -166,9 +169,11 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseReques
 		log.Error().Err(err).Msg("error adding and starting exercises")
 		return nil, fmt.Errorf("error adding and starting exercises: %v", err)
 	}
+
 	if err := a.redis.SaveState(a.EnvPool); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
+
 	// TODO: Need to return host information back to daemon to display to user in case of VPN lab
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
@@ -185,6 +190,11 @@ func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 	if err := l.StartExercise(ctx, req.Exercise); err != nil {
 		return nil, err
 	}
+
+	if err := a.redis.SaveState(a.EnvPool); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
@@ -200,6 +210,11 @@ func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseReques
 	if err := l.StopExercise(ctx, req.Exercise); err != nil {
 		return nil, err
 	}
+
+	if err := a.redis.SaveState(a.EnvPool); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
@@ -215,5 +230,10 @@ func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 	if err := l.ResetExercise(ctx, req.Exercise); err != nil {
 		return nil, fmt.Errorf("error resetting exercise: %v", err)
 	}
+
+	if err := a.redis.SaveState(a.EnvPool); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }

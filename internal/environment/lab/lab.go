@@ -43,11 +43,12 @@ func (lType LabType) String() string {
 func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType LabType, eventTag string) (Lab, error) {
 	lab := Lab{
 		M:               &sync.RWMutex{},
-		ExTags:          make(map[string]*exercise.Exercise),
+		Exercises:       make(map[string]*exercise.Exercise),
 		Vlib:            lc.Vlib,
 		ExerciseConfigs: lc.ExerciseConfs,
 		GuacUsername:    uuid.New().String()[0:8],
 		GuacPassword:    uuid.New().String()[0:8],
+		IsVPN:           isVPN,
 	}
 
 	// Create lab network

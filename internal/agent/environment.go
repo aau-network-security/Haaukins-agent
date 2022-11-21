@@ -178,6 +178,13 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 		json.Unmarshal([]byte(ex), &estruct)
 		exerConfs = append(exerConfs, estruct)
 	}
+	for _, eConf := range env.EnvConfig.LabConf.ExerciseConfs {
+		for _, reqConf := range exerConfs {
+			if eConf.Tag == reqConf.Tag {
+				return nil, fmt.Errorf("exercise already exists in environment: %s", reqConf.Tag)
+			}
+		}
+	}
 	env.EnvConfig.LabConf.ExerciseConfs = append(env.EnvConfig.LabConf.ExerciseConfs, exerConfs...)
 
 	// TODO: Is it a problem to use the workerpool here? Maybe just use a go routine for each lab.

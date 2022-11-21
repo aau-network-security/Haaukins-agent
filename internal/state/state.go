@@ -175,7 +175,7 @@ func convertLabState(l Lab, vlib *virtual.VboxLibrary) (*lab.Lab, error) {
 	resumedLab := &lab.Lab{
 		M:         &sync.RWMutex{},
 		Frontends: make(map[uint]lab.FrontendConf),
-		ExTags:    make(map[string]*exercise.Exercise),
+		Exercises: make(map[string]*exercise.Exercise),
 	}
 
 	resumedLab.Tag = l.Tag
@@ -186,7 +186,7 @@ func convertLabState(l Lab, vlib *virtual.VboxLibrary) (*lab.Lab, error) {
 		resumedLab.Frontends[uint(port)] = f
 	}
 
-	for k, ex := range l.ExTags {
+	for k, ex := range l.Exercises {
 		exTag := &exercise.Exercise{
 			ContainerOpts: ex.ContainerOpts,
 			VboxOpts:      ex.VboxOpts,
@@ -203,27 +203,7 @@ func convertLabState(l Lab, vlib *virtual.VboxLibrary) (*lab.Lab, error) {
 		for _, vm := range ex.Vms {
 			exTag.Machines = append(exTag.Machines, vm)
 		}
-		resumedLab.ExTags[k] = exTag
-	}
-
-	for _, ex := range l.Exercises {
-		exercise := &exercise.Exercise{
-			ContainerOpts: ex.ContainerOpts,
-			VboxOpts:      ex.VboxOpts,
-			Tag:           ex.Tag,
-			Vlib:          vlib,
-			Net:           ex.Net,
-			DnsAddr:       ex.DnsAddr,
-			DnsRecords:    ex.DnsRecords,
-			Ips:           ex.Ips,
-		}
-		for _, c := range ex.Containers {
-			exercise.Machines = append(exercise.Machines, c)
-		}
-		for _, vm := range ex.Vms {
-			exercise.Machines = append(exercise.Machines, vm)
-		}
-		resumedLab.Exercises = append(resumedLab.Exercises, exercise)
+		resumedLab.Exercises[k] = exTag
 	}
 
 	resumedLab.ExerciseConfigs = l.ExerciseConfigs
@@ -290,7 +270,7 @@ func makeEnvState(env *environment.Environment) Environment {
 func makeLabState(l *lab.Lab) Lab {
 	labState := Lab{
 		Frontends: make(map[string]lab.FrontendConf),
-		ExTags:    make(map[string]Exercise),
+		Exercises: make(map[string]Exercise),
 	}
 	labState.Tag = l.Tag
 	labState.Type = l.Type
@@ -299,7 +279,7 @@ func makeLabState(l *lab.Lab) Lab {
 		labState.Frontends[strconv.Itoa(int(k))] = f
 	}
 
-	for k, ex := range l.ExTags {
+	for k, ex := range l.Exercises {
 		exTag := Exercise{
 			ContainerOpts: ex.ContainerOpts,
 			VboxOpts:      ex.VboxOpts,
@@ -318,29 +298,7 @@ func makeLabState(l *lab.Lab) Lab {
 				exTag.Vms = append(exTag.Vms, vm)
 			}
 		}
-		labState.ExTags[k] = exTag
-	}
-
-	for _, ex := range l.Exercises {
-		exercise := Exercise{
-			ContainerOpts: ex.ContainerOpts,
-			VboxOpts:      ex.VboxOpts,
-			Tag:           ex.Tag,
-			Net:           ex.Net,
-			DnsAddr:       ex.DnsAddr,
-			DnsRecords:    ex.DnsRecords,
-			Ips:           ex.Ips,
-		}
-		for _, m := range ex.Machines {
-			c, cok := m.(*virtual.Container)
-			vm, vmok := m.(*virtual.Vm)
-			if cok {
-				exercise.Containers = append(exercise.Containers, c)
-			} else if vmok {
-				exercise.Vms = append(exercise.Vms, vm)
-			}
-		}
-		labState.Exercises = append(labState.Exercises, exercise)
+		labState.Exercises[k] = exTag
 	}
 
 	labState.ExerciseConfigs = l.ExerciseConfigs

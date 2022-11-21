@@ -42,8 +42,7 @@ type Lab struct {
 	Tag               string
 	Type              lab.LabType
 	Frontends         map[string]lab.FrontendConf
-	ExTags            map[string]Exercise
-	Exercises         []Exercise
+	Exercises         map[string]Exercise
 	ExerciseConfigs   []exercise.ExerciseConfig
 	DisabledExercises []string
 	DnsRecords        []*lab.DNSRecord
@@ -81,11 +80,6 @@ type Network struct {
 	Subnet    string
 	IsVPN     bool
 	Connected []string
-}
-
-type FrontendConf struct {
-	vm   Vm
-	Conf virtual.InstanceConfig
 }
 
 type Vm struct {

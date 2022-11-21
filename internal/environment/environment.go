@@ -92,11 +92,11 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
 					return
 				}
-				if !lab.IsVPN {
-					if err := env.CreateGuacConn(lab); err != nil {
-						log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
-					}
+				
+				if err := env.CreateGuacConn(lab); err != nil {
+					log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
 				}
+				
 
 				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
 				// If lab was created while running CloseEnvironment, close the lab
@@ -210,8 +210,8 @@ func (env *Environment) removeVPNConfs() {
 
 	resp, err := env.Wg.ManageNIC(context.Background(), &wg.ManageNICReq{Cmd: "down", Nic: envTag})
 	if err != nil {
-		log.Error().Msgf("Error when disabling VPN connection for event %s", envTag)
-
+		log.Error().Err(err).Msgf("Error when disabling VPN connection for event %s", envTag)
+		return
 	}
 	if resp != nil {
 		log.Info().Str("Message", resp.Message).Msgf("VPN connection is closed for event %s ", envTag)
