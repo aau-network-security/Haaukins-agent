@@ -14,10 +14,7 @@ import (
 // However the models in the state only has values which can be masharled to a json string since alot of the models in the packages holds interfaces, functions etc. which cannot be marshalled.
 // So the state variables will be carefully choosen in order to resume the state most effectively.
 
-type RedisCache struct {
-	Host string
-	DB   int
-}
+
 
 type Environment struct {
 	EnvConfig EnvConfig

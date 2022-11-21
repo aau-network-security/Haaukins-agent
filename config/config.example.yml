@@ -6,9 +6,9 @@ sign-key: test-sign-key
 max-workers: 5
 guac-ssl: false
 jwtSecret: test
-redis-data-path: /path/to/desired/redis/data
 file-transfer-root: /path/to/desired/filetransfer/root
 ova-dir: /path/to/desired/ova/directory
+state-path: /path/to/desired/state/directory
 
 exercise-service:
   grpc: "localhost:port"

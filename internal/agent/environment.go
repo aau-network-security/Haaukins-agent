@@ -14,6 +14,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
@@ -100,13 +101,12 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 		log.Error().Err(err).Msg("error creating environment")
 		return &proto.StatusResponse{Message: "Error creating environment"}, err
 	}
-	// TODO Still need to figure out how to keep the state of the agent
 
 	// Start the environment
 	go env.Start(context.TODO())
 
 	a.EnvPool.AddEnv(&env)
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
@@ -139,7 +139,7 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 	env.EnvConfig.Status = environment.StatusClosed
 
 	a.EnvPool.RemoveEnv(envConf.Tag)
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 	return &proto.StatusResponse{Message: "OK"}, nil
@@ -202,7 +202,7 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 		})
 	}
 	wg.Wait()
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 	return &proto.StatusResponse{Message: "OK"}, nil

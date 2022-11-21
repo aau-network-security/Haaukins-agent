@@ -11,9 +11,9 @@ type Config struct {
 	AuthKey            string                           `yaml:"auth-key"`
 	SignKey            string                           `yaml:"sign-key"`
 	MaxWorkers         int                              `yaml:"max-workers"`
-	RedisDataPath      string                           `yaml:"redis-data-path"`
 	FileTransferRoot   string                           `yaml:"file-transfer-root"`
 	OvaDir             string                           `yaml:"ova-dir"`
+	StatePath          string                           `yaml:"state-path"`
 	ExerciseService    ServiceConfig                    `yaml:"exercise-service"`
 	VPNService         VPNconf                          `yaml:"vpn-service"`
 	DockerRepositories []dockerclient.AuthConfiguration `yaml:"docker-repositories"`

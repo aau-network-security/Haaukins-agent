@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -13,24 +14,12 @@ import (
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/worker"
-	"github.com/go-redis/redis"
 	"github.com/goccy/go-json"
-	"github.com/nitishm/go-rejson"
 	"github.com/rs/zerolog/log"
 )
 
-func (cache *RedisCache) getClient() *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr:     cache.Host,
-		Password: "",
-		DB:       cache.DB,
-	})
-}
+func SaveState(envPool *environment.EnvPool, statePath string) error {
 
-func (cache *RedisCache) SaveState(envPool *environment.EnvPool) error {
-	client := cache.getClient()
-	rh := rejson.NewReJSONHandler()
-	rh.SetGoRedisClient(client)
 	state := State{
 		Environments: make(map[string]Environment),
 	}
@@ -44,29 +33,26 @@ func (cache *RedisCache) SaveState(envPool *environment.EnvPool) error {
 		log.Error().Err(err).Msg("error marshalling state")
 		return err
 	}
-
-	_ = os.WriteFile("data/state.json", jsonState, 0644)
-
-	if _, err := rh.JSONSet("state", ".", state); err != nil {
-		log.Error().Err(err).Msg("error setting state in redis")
+	path := filepath.Join(statePath, "state.json")
+	log.Debug().Str("path", path).Msg("path to state.json")
+	if err := os.WriteFile(path, jsonState, 0644); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (cache *RedisCache) ResumeState(vlib *virtual.VboxLibrary, workerPool worker.WorkerPool) (*environment.EnvPool, error) {
-	client := cache.getClient()
-	rh := rejson.NewReJSONHandler()
-	rh.SetGoRedisClient(client)
-
+func ResumeState(vlib *virtual.VboxLibrary, workerPool worker.WorkerPool, statePath string) (*environment.EnvPool, error) {
 	state := State{}
 
-	stateStr, err := rh.JSONGet("state", ".")
-	if stateStr == nil {
+	path := filepath.Join(statePath, "state.json")
+	log.Debug().Str("path", path).Msg("path to state.json")
+	stateStr, err := os.ReadFile(path)
+	if stateStr == nil || err != nil {
 		return nil, nil
 	}
-	if err := json.Unmarshal(stateStr.([]byte), &state); err != nil {
+
+	if err := json.Unmarshal(stateStr, &state); err != nil {
 		log.Error().Err(err).Msg("error unmarshalling state")
 		if e, ok := err.(*json.SyntaxError); ok {
 			log.Printf("syntax error at byte offset %d", e.Offset)
@@ -87,13 +73,14 @@ func (cache *RedisCache) ResumeState(vlib *virtual.VboxLibrary, workerPool worke
 		}
 		envPool.Envs[k] = env
 	}
+
 	jsonState, err := json.Marshal(state)
 	if err != nil {
 		log.Error().Err(err).Msg("error marshalling state")
 		return nil, err
 	}
 
-	_ = os.WriteFile("data/state2.json", jsonState, 0644)
+	_ = os.WriteFile(path, jsonState, 0644)
 
 	return envPool, nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
@@ -23,7 +24,7 @@ func (a *Agent) LabStream(req *proto.Empty, stream proto.Agent_LabStreamServer) 
 		case lab := <-a.newLabs:
 			log.Debug().Msg("Lab in new lab channel, sending to client...")
 			// Saving state since new lab in channel means new lab in environment
-			if err := a.redis.SaveState(a.EnvPool); err != nil {
+			if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 				log.Error().Err(err).Msg("error saving state")
 			}
 			stream.Send(&lab)
@@ -124,7 +125,7 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 
 	delete(a.EnvPool.Envs[envKey[0]].Labs, req.LabTag)
 
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 
@@ -170,7 +171,7 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseReques
 		return nil, fmt.Errorf("error adding and starting exercises: %v", err)
 	}
 
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 
@@ -191,7 +192,7 @@ func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 		return nil, err
 	}
 
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 
@@ -211,7 +212,7 @@ func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseReques
 		return nil, err
 	}
 
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 
@@ -231,7 +232,7 @@ func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 		return nil, fmt.Errorf("error resetting exercise: %v", err)
 	}
 
-	if err := a.redis.SaveState(a.EnvPool); err != nil {
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
 

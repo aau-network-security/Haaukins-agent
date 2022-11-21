@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"google.golang.org/grpc"
@@ -28,7 +27,6 @@ var configPath string
 type Agent struct {
 	initialized bool
 	config      *Config
-	redis       state.RedisCache
 	State       *state.State
 	auth        Authenticator
 	vlib        *virtual.VboxLibrary
@@ -83,21 +81,20 @@ func NewConfigFromFile(path string) (*Config, error) {
 	// In case paths has not been set, use working directory
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get current working directory for redis")
+		log.Fatal().Err(err).Msg("failed to get current working directory")
 	}
-	if c.RedisDataPath == "" {
-		log.Debug().Msg("redisDataPath not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "data")
+	if c.StatePath == "" {
+		log.Fatal().Msg("statepath not provided in the configuration file\n Please provide a path for the state file to be saved")
 	}
 
 	if c.FileTransferRoot == "" {
 		log.Debug().Msg("filetransfer root not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "filetransfer")
+		c.FileTransferRoot = filepath.Join(pwd, "filetransfer")
 	}
 
 	if c.OvaDir == "" {
 		log.Debug().Msg("ova dir not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "vms")
+		c.OvaDir = filepath.Join(pwd, "vms")
 	}
 
 	for _, repo := range c.DockerRepositories {
@@ -108,67 +105,20 @@ func NewConfigFromFile(path string) (*Config, error) {
 }
 
 func New(conf *Config) (*Agent, error) {
-	ctx := context.Background()
 	// Creating filetransfer root if not exists
 	err := virtual.CreateFileTransferRoot(conf.FileTransferRoot)
 	if err != nil {
 		log.Fatal().Msgf("Error while creating file transfer root: %s", err)
 	}
 
-	// Setting up the redis container
-	if _, err := os.Stat(conf.RedisDataPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(conf.RedisDataPath, os.ModePerm)
+	// Setting up the state path
+	if _, err := os.Stat(conf.StatePath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(conf.StatePath, os.ModePerm)
 		if err != nil {
 			log.Error().Err(err).Msg("Error creating dir")
 		}
 	}
 
-	// Check if redis is running
-	container, err := virtual.GetRedisContainer(conf.RedisDataPath)
-	if err != nil {
-		log.Error().Err(err).Msg("error getting container state")
-		return nil, err
-	}
-
-	// Container exists checking the state to start the container if it has been stopped
-	if container != nil {
-		log.Debug().Msg("Found already existing redis container")
-		log.Debug().Msgf("Container info: %v", container.Info())
-		if container.Info().State == virtual.Stopped || container.Info().State == virtual.Suspended {
-			log.Debug().Msg("Container not running, restarting the container...")
-			if err := container.Start(ctx); err != nil {
-				log.Fatal().Err(err).Msg("Failed to start existing redis container")
-			}
-			// Waiting for container to start
-			time.Sleep(5)
-		} else {
-			log.Debug().Msg("Container already running, continueing...")
-		}
-	} else {
-		// Didn't detect the redis container, starting a new one...
-		log.Info().Msg("No redis container detected, creating a new one")
-		container = virtual.NewContainer(virtual.ContainerConfig{
-			Image: "redislabs/rejson:2.4.1",
-			// Cmd: []string{
-			// 	"/data/redis.conf",
-			// 	"--loadmodule",
-			// 	"/usr/lib/redis/modules/rejson.so",
-			// },
-			Name:      "redis_cache",
-			UseBridge: true,
-			Mounts: []string{
-				conf.RedisDataPath + ":/data", // Mounting for persistent storage
-			},
-			PortBindings: map[string]string{
-				"6379": "127.0.0.1:6379",
-			},
-		})
-		if err := container.Run(ctx); err != nil {
-			log.Fatal().Err(err).Msg("Error running new redis container")
-		}
-		// Waiting for container to start
-		time.Sleep(5)
-	}
 	var initialized = true
 	var exClient eproto.ExerciseStoreClient
 	// Check if exercise service has been configured by daemon
@@ -189,14 +139,9 @@ func New(conf *Config) (*Agent, error) {
 	workerPool := worker.NewWorkerPool(conf.MaxWorkers)
 	workerPool.Run()
 
-	redis := state.RedisCache{
-		Host: "127.0.0.1:6379",
-		DB:   0,
-	}
-
 	vlib := virtual.NewLibrary(conf.OvaDir)
 
-	envPool, err := redis.ResumeState(vlib, workerPool)
+	envPool, err := state.ResumeState(vlib, workerPool, conf.StatePath)
 	if err != nil {
 		log.Error().Err(err).Msg("error resuming state")
 		envPool = &env.EnvPool{
@@ -214,7 +159,6 @@ func New(conf *Config) (*Agent, error) {
 	a := &Agent{
 		initialized: initialized,
 		config:      conf,
-		redis:       redis,
 		workerPool:  workerPool,
 		vlib:        vlib,
 		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),

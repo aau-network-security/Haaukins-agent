@@ -178,39 +178,6 @@ func NewContainer(conf ContainerConfig) *Container {
 	}
 }
 
-func GetRedisContainer(mountPath string) (*Container, error) {
-	redisContainer, err := DefaultClient.ListContainers(docker.ListContainersOptions{
-		All: true,
-		Filters: map[string][]string{
-			"name": {"redis_cache"},
-		},
-	})
-	if err != nil {
-		log.Error().Err(err).Msg("error listing containers with name")
-		return nil, err
-	}
-	if len(redisContainer) == 0 {
-		return nil, nil
-	}
-
-	c := &Container{}
-	c.Id = redisContainer[0].ID
-
-	c.Conf = ContainerConfig{
-		Image:     "redis:7.0.4",
-		Name:      "redis_cache",
-		UseBridge: true,
-		Mounts: []string{
-			mountPath + ":/data",
-		},
-		PortBindings: map[string]string{
-			"6379": "127.0.0.1:6379",
-		},
-	}
-
-	return c, nil
-}
-
 func (c *Container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 	var env []string
 	for k, v := range c.Conf.EnvVars {
