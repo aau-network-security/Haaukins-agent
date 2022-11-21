@@ -38,9 +38,9 @@ const (
 )
 
 type Server struct {
-	Cont     *virtual.Container
-	ConfFile string
-	io.Closer
+	Cont      *virtual.Container
+	ConfFile  string
+	io.Closer `json:"-"`
 }
 
 type RR struct {
