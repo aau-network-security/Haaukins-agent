@@ -10,11 +10,11 @@ import (
 )
 
 type Lab struct {
-	M         *sync.RWMutex
-	Tag       string
-	Type      LabType
-	Frontends map[uint]FrontendConf
-	Exercises map[string]*exercise.Exercise
+	M                 *sync.RWMutex
+	Tag               string
+	Type              LabType
+	Frontends         map[uint]FrontendConf
+	Exercises         map[string]*exercise.Exercise
 	ExerciseConfigs   []exercise.ExerciseConfig
 	DisabledExercises []string
 	DnsRecords        []*DNSRecord
