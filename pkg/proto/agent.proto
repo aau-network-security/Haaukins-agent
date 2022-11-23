@@ -14,6 +14,7 @@ service Agent {
     rpc ResetExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
+    rpc Ping (PingRequest) returns (PingResponse) {}
     rpc LabStream(Empty) returns (stream Lab) {}
 }
 
@@ -24,6 +25,14 @@ message InitRequest {
     string authKey = 2;
     string signKey = 3;
     bool tlsEnabled = 4;
+}
+
+message PingRequest {
+    string ping = 1;
+}
+
+message PingResponse {
+    string pong = 1;
 }
 
 message CreatEnvRequest {
