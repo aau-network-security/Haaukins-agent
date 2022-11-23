@@ -24,6 +24,15 @@ func (ep *EnvPool) GetEnv(tag string) (*Environment, error) {
 	return ep.Envs[tag], nil
 }
 
+func (ep *EnvPool) DoesEnvExist(tag string) bool {
+	ep.M.RLock()
+	defer ep.M.RUnlock()
+
+	_, ok := ep.Envs[tag]
+
+	return ok
+}
+
 // Returns a lab from the env pool if the lab tag exists in any of the environments
 func (ep *EnvPool) GetLabByTag(tag string) (*lab.Lab, error) {
 	ep.M.Lock()

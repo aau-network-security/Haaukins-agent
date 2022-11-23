@@ -36,6 +36,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 	log.Debug().Msgf("got createEnv request: %v", req)
 
+	if a.EnvPool.DoesEnvExist(req.EventTag) {
+		return nil, fmt.Errorf("environment with tag: \"%s\" already exists", req.EventTag)
+	}
+
 	// Create a new environment for event if it does not exists
 	// Setting up the env config
 	var envConf env.EnvConfig
