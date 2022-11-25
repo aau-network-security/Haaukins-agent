@@ -32,7 +32,7 @@ type Agent struct {
 	vlib        *virtual.VboxLibrary
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
-	newLabs    chan pb.Lab
+	newLabs    []pb.Lab
 	ExClient   eproto.ExerciseStoreClient
 	EnvPool    *env.EnvPool `json:"envpool,omitempty"`
 }
@@ -162,7 +162,6 @@ func New(conf *Config) (*Agent, error) {
 		workerPool:  workerPool,
 		vlib:        vlib,
 		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs:     make(chan pb.Lab, 100),
 		ExClient:    exClient,
 		EnvPool:     envPool,
 		State:       &state.State{},
