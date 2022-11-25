@@ -14,7 +14,6 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,19 +22,19 @@ var (
 	VPNPortmax = 6000
 )
 
-func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initialLabs int32) (Environment, error) {
+func (ec *EnvConfig) NewEnv(ctx context.Context) (*Environment, error) {
 	// Make worker work
 	guac, err := NewGuac(ctx, ec.Tag)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating new guacamole")
-		return Environment{}, err
+		return nil, err
 	}
 	// Getting wireguard client from config
 	//TODO MAke part of agent initilization
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
-		return Environment{}, err
+		return nil, err
 	}
 
 	ipT := IPTables{
@@ -53,7 +52,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		eventVPNIPs = append(eventVPNIPs, ipAddrs...)
 	}
 
-	env := Environment{
+	env := &Environment{
 		M:             &sync.RWMutex{},
 		EnvConfig:     ec,
 		Guac:          guac,
@@ -64,64 +63,6 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		Dockerhost:    dockerHost,
 		IpT:           ipT,
 		IpRules:       map[string]IpRules{},
-	}
-
-	m := &sync.RWMutex{}
-	// If it is a beginner event, labs will be created and be available beforehand
-	// TODO: add more vms based on amount of users on a team
-	if ec.Type == lab.TypeBeginner {
-		for i := 0; i < int(initialLabs); i++ {
-			// Adding lab creation task to taskqueue
-			ec.WorkerPool.AddTask(func() {
-				ctx := context.Background()
-				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when starting worker")
-				// Make sure that environment is still running before creating lab
-				if ec.Status == StatusClosing || ec.Status == StatusClosed {
-					log.Info().Msg("environment closed before newlab task was taken from queue, canceling...")
-					return
-				}
-				// Creating containers and frontends
-				lab, err := ec.LabConf.NewLab(ctx, false, lab.TypeBeginner, ec.Tag)
-				if err != nil {
-					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error creating new lab")
-					return
-				}
-				// Starting the created containers and frontends
-				if err := lab.Start(ctx); err != nil {
-					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
-					return
-				}
-
-				if err := env.CreateGuacConn(lab); err != nil {
-					log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
-				}
-
-				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
-				// If lab was created while running CloseEnvironment, close the lab
-				if ec.Status == StatusClosing || ec.Status == StatusClosed {
-					log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
-					if err := lab.Close(); err != nil {
-						log.Error().Err(err).Msg("error closing lab")
-						return
-					}
-					return
-				}
-				// Sending lab info to daemon
-				// TODO Figure out what exact data should be returned to daemon
-				// TODO use new getChallenges function to get challenges for lab to return flag etc.
-				newLab := proto.Lab{
-					Tag:      lab.Tag,
-					EventTag: ec.Tag,
-					IsVPN:    false,
-				}
-				newLabs <- newLab
-				// Adding lab to environment
-				m.Lock()
-				env.Labs[lab.Tag] = &lab
-				m.Unlock()
-
-			})
-		}
 	}
 
 	return env, nil
