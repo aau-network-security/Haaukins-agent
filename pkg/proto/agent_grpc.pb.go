@@ -33,7 +33,7 @@ type AgentClient interface {
 	StartExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	StopExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
+	MonitorStream(ctx context.Context, opts ...grpc.CallOption) (Agent_MonitorStreamClient, error)
 }
 
 type agentClient struct {
@@ -143,32 +143,31 @@ func (c *agentClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *agentClient) LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Agent_ServiceDesc.Streams[0], "/agent.Agent/LabStream", opts...)
+func (c *agentClient) MonitorStream(ctx context.Context, opts ...grpc.CallOption) (Agent_MonitorStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Agent_ServiceDesc.Streams[0], "/agent.Agent/MonitorStream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &agentLabStreamClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+	x := &agentMonitorStreamClient{stream}
 	return x, nil
 }
 
-type Agent_LabStreamClient interface {
-	Recv() (*Lab, error)
+type Agent_MonitorStreamClient interface {
+	Send(*PingRequest) error
+	Recv() (*MonitorResponse, error)
 	grpc.ClientStream
 }
 
-type agentLabStreamClient struct {
+type agentMonitorStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *agentLabStreamClient) Recv() (*Lab, error) {
-	m := new(Lab)
+func (x *agentMonitorStreamClient) Send(m *PingRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *agentMonitorStreamClient) Recv() (*MonitorResponse, error) {
+	m := new(MonitorResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -190,7 +189,7 @@ type AgentServer interface {
 	StartExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	LabStream(*Empty, Agent_LabStreamServer) error
+	MonitorStream(Agent_MonitorStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
 
@@ -231,8 +230,8 @@ func (UnimplementedAgentServer) StopExerciseInLab(context.Context, *ExerciseRequ
 func (UnimplementedAgentServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
+func (UnimplementedAgentServer) MonitorStream(Agent_MonitorStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method MonitorStream not implemented")
 }
 func (UnimplementedAgentServer) mustEmbedUnimplementedAgentServer() {}
 
@@ -445,25 +444,30 @@ func _Agent_Ping_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Agent_LabStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(AgentServer).LabStream(m, &agentLabStreamServer{stream})
+func _Agent_MonitorStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentServer).MonitorStream(&agentMonitorStreamServer{stream})
 }
 
-type Agent_LabStreamServer interface {
-	Send(*Lab) error
+type Agent_MonitorStreamServer interface {
+	Send(*MonitorResponse) error
+	Recv() (*PingRequest, error)
 	grpc.ServerStream
 }
 
-type agentLabStreamServer struct {
+type agentMonitorStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *agentLabStreamServer) Send(m *Lab) error {
+func (x *agentMonitorStreamServer) Send(m *MonitorResponse) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func (x *agentMonitorStreamServer) Recv() (*PingRequest, error) {
+	m := new(PingRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // Agent_ServiceDesc is the grpc.ServiceDesc for Agent service.
@@ -520,9 +524,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "LabStream",
-			Handler:       _Agent_LabStream_Handler,
+			StreamName:    "MonitorStream",
+			Handler:       _Agent_MonitorStream_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "agent.proto",

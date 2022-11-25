@@ -15,10 +15,17 @@ service Agent {
     rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc Ping (PingRequest) returns (PingResponse) {}
-    rpc LabStream(Empty) returns (stream Lab) {}
+    rpc MonitorStream(stream PingRequest) returns (stream MonitorResponse) {}
 }
 
 message Empty{}
+
+message MonitorResponse {
+    string hb = 1;
+    double cpu = 2;
+    double mem = 3;
+    repeated Lab newLabs = 4;
+}
 
 message InitRequest {
     string url = 1;

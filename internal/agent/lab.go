@@ -17,21 +17,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// For the daemon to listen to. New labs created with the workers are pushed to the daemon through the stream when they are created and running.
-func (a *Agent) LabStream(req *proto.Empty, stream proto.Agent_LabStreamServer) error {
-	for {
-		select {
-		case lab := <-a.newLabs:
-			log.Debug().Msg("Lab in new lab channel, sending to client...")
-			// Saving state since new lab in channel means new lab in environment
-			if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-				log.Error().Err(err).Msg("error saving state")
-			}
-			stream.Send(&lab)
-		}
-	}
-}
-
 // TODO: Rethink func name as this should be the function that configures a lab for a user
 func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest) (*proto.StatusResponse, error) {
 	a.EnvPool.M.RLock()
@@ -85,7 +70,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			}
 			return
 		}
-
+		
 		// Sending lab info to daemon
 		newLab := proto.Lab{
 			Tag:      lab.Tag,
@@ -93,12 +78,15 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			IsVPN:    req.IsVPN,
 		}
 
-		a.newLabs <- newLab
+		a.newLabs = append(a.newLabs, newLab)
 		m.Lock()
 		env.Labs[lab.Tag] = &lab
 		m.Unlock()
-		// If lab was created while running CloseEnvironment, close the lab
 
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+		// If lab was created while running CloseEnvironment, close the lab
 	})
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
