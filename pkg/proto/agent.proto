@@ -25,6 +25,7 @@ message MonitorResponse {
     double cpu = 2;
     double mem = 3;
     repeated Lab newLabs = 4;
+    uint64 memAvailable = 5;
 }
 
 message InitRequest {

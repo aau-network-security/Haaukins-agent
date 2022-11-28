@@ -32,7 +32,7 @@ type Agent struct {
 	vlib        *virtual.VboxLibrary
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
-	newLabs    []pb.Lab
+	newLabs    chan pb.Lab
 	ExClient   eproto.ExerciseStoreClient
 	EnvPool    *env.EnvPool `json:"envpool,omitempty"`
 }
@@ -60,7 +60,7 @@ func NewConfigFromFile(path string) (*Config, error) {
 	}
 
 	if c.GrpcPort == 0 {
-		log.Debug().Int("port",50095).Msg("port not provided in the configuration file using default")
+		log.Debug().Int("port", 50095).Msg("port not provided in the configuration file using default")
 		c.GrpcPort = 50095
 	}
 
@@ -162,6 +162,7 @@ func New(conf *Config) (*Agent, error) {
 		workerPool:  workerPool,
 		vlib:        vlib,
 		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs:     make(chan pb.Lab, 100),
 		ExClient:    exClient,
 		EnvPool:     envPool,
 		State:       &state.State{},

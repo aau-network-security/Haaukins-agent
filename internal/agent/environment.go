@@ -153,7 +153,8 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 					EventTag: envConf.Tag,
 					IsVPN:    false,
 				}
-				a.newLabs = append(a.newLabs, newLab)
+				//a.newLabs = append(a.newLabs, newLab)
+				a.newLabs <- newLab
 				// Adding lab to environment
 				m.Lock()
 				env.Labs[lab.Tag] = &lab

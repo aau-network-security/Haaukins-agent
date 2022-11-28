@@ -48,13 +48,23 @@ func (a *Agent) MonitorStream(stream proto.Agent_MonitorStreamServer) error {
 		}
 
 		resp := &proto.MonitorResponse{
-			Hb:  "alive",
-			Cpu: cpuPerc[0],
-			Mem: memory.UsedPercent,
+			Hb:           "alive",
+			Cpu:          cpuPerc[0],
+			Mem:          memory.UsedPercent,
+			MemAvailable: memory.Available,
 		}
-		for i, l := range a.newLabs {
-			resp.NewLabs = append(resp.NewLabs, &l)
-			a.newLabs = popFromNewLabSlice(a.newLabs, i)
+
+	L:
+		for {
+			select {
+			case l, ok := <-a.newLabs:
+				if !ok { //closed
+					break L
+				}
+				resp.NewLabs = append(resp.NewLabs, &l)
+			default:
+				break L
+			}
 		}
 
 		if err := stream.Send(resp); err != nil {

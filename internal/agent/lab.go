@@ -78,7 +78,8 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			IsVPN:    req.IsVPN,
 		}
 
-		a.newLabs = append(a.newLabs, newLab)
+		//a.newLabs = append(a.newLabs, newLab)
+		a.newLabs <- newLab
 		m.Lock()
 		env.Labs[lab.Tag] = &lab
 		m.Unlock()
