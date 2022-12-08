@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/cpu"
@@ -47,11 +48,26 @@ func (a *Agent) MonitorStream(stream proto.Agent_MonitorStreamServer) error {
 			memory.UsedPercent = 0
 		}
 
+		containerCount, err := virtual.GetContainerCount()
+		if err != nil {
+			log.Error().Err(err).Msg("error getting container count")
+
+		}
+		vmCount, err := virtual.GetRunningVmCount()
+		if err!= nil {
+			log.Error().Err(err).Msg("error getting running vm count")
+		}
+
 		resp := &proto.MonitorResponse{
-			Hb:           "alive",
-			Cpu:          cpuPerc[0],
-			Mem:          memory.UsedPercent,
-			MemAvailable: memory.Available,
+			Hb: "alive",
+			Resources: &proto.Resources{
+				Cpu:          cpuPerc[0],
+				Mem:          memory.UsedPercent,
+				MemAvailable: memory.Available,
+				LabCount:    a.EnvPool.GetFullLabCount(),
+				ContainerCount: containerCount,
+				VmCount: vmCount,
+			},
 		}
 
 	L:

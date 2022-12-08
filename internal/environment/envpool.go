@@ -49,6 +49,18 @@ func (ep *EnvPool) GetLabByTag(tag string) (*lab.Lab, error) {
 	return nil, fmt.Errorf("could not find lab with tag: %s", tag)
 }
 
+func (ep *EnvPool) GetFullLabCount() (uint32) {
+	ep.M.RLock()
+	defer ep.M.RUnlock()
+	var count uint32
+	for _, env := range ep.Envs {
+		for range env.Labs {
+			count++
+		}
+	}
+	return count
+}
+
 // Removes an environment from the environment pool
 func (ep *EnvPool) RemoveEnv(tag string) error {
 	ep.M.Lock()

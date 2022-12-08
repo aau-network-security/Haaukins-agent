@@ -1027,3 +1027,17 @@ func verifyLocalImageVersion(img Image) error {
 
 	return nil
 }
+
+// Gets the count of all containers running
+func GetContainerCount() (uint32, error) {
+	opts := docker.ListContainersOptions{
+		Filters: map[string][]string{
+			"status": {"running"},
+		},
+	}
+	containers, err := DefaultClient.ListContainers(opts)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(len(containers)), nil
+}

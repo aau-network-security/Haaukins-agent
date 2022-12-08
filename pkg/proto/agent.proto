@@ -22,10 +22,18 @@ message Empty{}
 
 message MonitorResponse {
     string hb = 1;
+    repeated Lab newLabs = 2;
+    Resources resources = 3;
+    
+}
+
+message Resources {
+    uint64 memAvailable = 1;
     double cpu = 2;
     double mem = 3;
-    repeated Lab newLabs = 4;
-    uint64 memAvailable = 5;
+    uint32 labCount = 4;
+    uint32 vmCount = 5;
+    uint32 containerCount = 6;
 }
 
 message InitRequest {

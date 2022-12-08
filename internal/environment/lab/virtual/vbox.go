@@ -619,3 +619,18 @@ func CreateFolderLink(vm string, eventTag string, teamId string) error {
 	}
 	return nil
 }
+
+// Gets the count of running Virtual machines
+func GetRunningVmCount() (uint32, error) {
+	cmd := "vboxmanage list runningvms | wc -l"
+	out, err := exec.Command("bash", "-c", cmd).Output()
+	if err != nil {
+		return 0, err
+	}
+	out = out[:len(out)-1]
+	vmCount, err := strconv.ParseUint(string(out), 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(vmCount), nil
+}
