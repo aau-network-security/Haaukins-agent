@@ -28,7 +28,6 @@ var (
 // Environments can be advanced or beginner environments.
 // Advanced environments is geared towards regular CTFs where as beginner environments can be used for
 // beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
-// TODO Check if environment exists, figure out what the logic should be.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
 	if !a.initialized {
