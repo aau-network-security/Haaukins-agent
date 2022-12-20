@@ -11,6 +11,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
@@ -22,17 +23,20 @@ func (a *Agent) LabStream(req *proto.Empty, stream proto.Agent_LabStreamServer) 
 		select {
 		case lab := <-a.newLabs:
 			log.Debug().Msg("Lab in new lab channel, sending to client...")
+			// Saving state since new lab in channel means new lab in environment
+			if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+				log.Error().Err(err).Msg("error saving state")
+			}
 			stream.Send(&lab)
 		}
 	}
 }
 
 // TODO: Rethink func name as this should be the function that configures a lab for a user
-// TODO: Handle assignment (Guac connection and VPN configs here)
 func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest) (*proto.StatusResponse, error) {
-	a.State.EnvPool.M.RLock()
-	env, ok := a.State.EnvPool.Envs[req.EventTag]
-	a.State.EnvPool.M.RUnlock()
+	a.EnvPool.M.RLock()
+	env, ok := a.EnvPool.Envs[req.EventTag]
+	a.EnvPool.M.RUnlock()
 	if !ok {
 		return nil, errors.New("environment for event does not exist")
 	}
@@ -66,6 +70,12 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			return
 		}
 
+		if !lab.IsVPN {
+			if err := env.CreateGuacConn(lab); err != nil {
+				log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
+			}
+		}
+
 		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
 		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
 			log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
@@ -95,7 +105,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 
 // Shuts down and removes all frontends and containers related to specific lab. Then removes it from the environment's lab map.
 func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*proto.StatusResponse, error) {
-	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
 		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
 		return nil, err
@@ -112,7 +122,11 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 	envKey := strings.Split(req.LabTag, "-")
 	log.Debug().Str("envKey", envKey[0]).Msg("env for lab")
 
-	delete(a.State.EnvPool.Envs[envKey[0]].Labs, req.LabTag)
+	delete(a.EnvPool.Envs[envKey[0]].Labs, req.LabTag)
+
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
 
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
@@ -121,7 +135,7 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 // It starts by creating the containers needed for the exercise, then it refreshes the DNS and starts the containers afterwards.
 // It utilizes a mutex lock to make sure that if anyone tries to run the same GRPc call twice without the first being finished, the second one will wait
 func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
-	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
 		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
 		return nil, err
@@ -132,7 +146,7 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseReques
 	}
 
 	var exerConfs []exercise.ExerciseConfig
-	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
+	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		log.Error().Err(err).Msg("error getting exercise by tags")
 		return nil, fmt.Errorf("error getting exercises: %s", err)
@@ -156,13 +170,17 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseReques
 		return nil, fmt.Errorf("error adding and starting exercises: %v", err)
 	}
 
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	// TODO: Need to return host information back to daemon to display to user in case of VPN lab
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
 // Starts a suspended/stopped exercise in a specific lab
 func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
-	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
 		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
 		return nil, err
@@ -172,12 +190,17 @@ func (a *Agent) StartExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 	if err := l.StartExercise(ctx, req.Exercise); err != nil {
 		return nil, err
 	}
+
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
 // Stops a running exercise for a specific lab
 func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
-	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
 		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
 		return nil, err
@@ -187,12 +210,17 @@ func (a *Agent) StopExerciseInLab(ctx context.Context, req *proto.ExerciseReques
 	if err := l.StopExercise(ctx, req.Exercise); err != nil {
 		return nil, err
 	}
+
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
 // Recreates and starts an exercise in a specific lab in case it should be having problems of any sorts.
 func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
-	l, err := a.State.EnvPool.GetLabByTag(req.LabTag)
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {
 		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
 		return nil, err
@@ -200,7 +228,15 @@ func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 
 	ctx = context.Background()
 	if err := l.ResetExercise(ctx, req.Exercise); err != nil {
-		return nil, fmt.Errorf("error resetting exercise: %v", err)
+		log.Error().Err(err).Msg("error resetting exercise")
+		return nil, errors.New("error resetting exercise")
 	}
+
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
+
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
+
+// TODO Add reset vm call
