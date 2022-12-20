@@ -22,7 +22,7 @@ func (l *Lab) AddExercises(ctx context.Context, confs ...exercise.ExerciseConfig
 			return errors.New("No tags, need atleast one tag")
 		}
 
-		if _, ok := l.ExTags[conf.Tag]; ok {
+		if _, ok := l.Exercises[conf.Tag]; ok {
 			return errors.New("Tag already exists")
 		}
 
@@ -50,8 +50,8 @@ func (l *Lab) AddExercises(ctx context.Context, confs ...exercise.ExerciseConfig
 				}
 			}
 		}
-		l.ExTags[conf.Tag] = e
-		l.Exercises = append(l.Exercises, e)
+		l.Exercises[conf.Tag] = e
+		//.Exercises = append(l.Exercises, e)
 	}
 
 	return nil
@@ -89,6 +89,43 @@ func (l *Lab) AddAndStartExercises(ctx context.Context, exerConfs ...exercise.Ex
 	wg.Wait()
 	if res != nil {
 		return res
+	}
+	return nil
+}
+
+// TODO: Set status of exercise so user can see weither if it is started or stopped.
+func (l *Lab) StartExercise(ctx context.Context, exTag string) error {
+	e, ok := l.Exercises[exTag]
+	if !ok {
+		return fmt.Errorf("could not find exercise with tag: %s", exTag)
+	}
+
+	if err := e.Start(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *Lab) StopExercise(ctx context.Context, exTag string) error {
+	e, ok := l.Exercises[exTag]
+	if !ok {
+		return fmt.Errorf("could not find exercise with tag: %s", exTag)
+	}
+
+	if err := e.Stop(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (l *Lab) ResetExercise(ctx context.Context, exTag string) error {
+	e, ok := l.Exercises[exTag]
+	if !ok {
+		return fmt.Errorf("could not find exercise with tag: %s", exTag)
+	}
+
+	if err := e.Reset(ctx); err != nil {
+		return err
 	}
 	return nil
 }

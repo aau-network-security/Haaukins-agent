@@ -10,19 +10,19 @@ import (
 )
 
 type IPTables struct {
-	sudo bool
+	Sudo bool
 
-	// flags to service
-	flags []string
+	// Flags to service
+	Flags []string
 
-	// enable debug or not
-	debug bool
+	// enable Debug or not
+	Debug bool
 
 	// Implementation of ExecFunc.
-	execFunc ExecFunc
+	ExecFunc ExecFunc
 
 	// Implementation of PipeFunc.
-	pipeFunc PipeFunc
+	PipeFunc PipeFunc
 }
 
 var (
@@ -112,15 +112,15 @@ func (ipTab *IPTables) execute(args ...string) ([]byte, error) {
 
 // exec executes an ExecFunc using 'iptables'.
 func (ipTab *IPTables) exec(cmd string, args ...string) ([]byte, error) {
-	flags := append(ipTab.flags, args...)
+	flags := append(ipTab.Flags, args...)
 
 	// If needed, prefix sudo.
-	if ipTab.sudo {
+	if ipTab.Sudo {
 		flags = append([]string{cmd}, flags...)
 		cmd = "sudo"
 	}
 	log.Debug().Msgf("exec %s %v", cmd, flags)
-	out, err := ipTab.execFunc(cmd, flags...)
+	out, err := ipTab.ExecFunc(cmd, flags...)
 	if out != nil {
 		out = bytes.TrimSpace(out)
 		log.Debug().Msgf("exec: %q", string(out))
@@ -134,6 +134,6 @@ func (ipTab *IPTables) exec(cmd string, args ...string) ([]byte, error) {
 	}
 	return out, nil
 }
-func shellExec(cmd string, args ...string) ([]byte, error) {
+func ShellExec(cmd string, args ...string) ([]byte, error) {
 	return exec.Command(cmd, args...).CombinedOutput()
 }

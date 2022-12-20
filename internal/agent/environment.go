@@ -13,7 +13,8 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
@@ -23,8 +24,10 @@ var (
 	vpnIPPool = newIPPoolFromHost()
 )
 
-/* Creates a new lab environment for a new event.
-Labs can afterwards be added using the CreateLabsForEnv call */
+// Creates a new lab environment. Should be called by the daemon when a new event is being created.
+// Environments can be advanced or beginner environments.
+// Advanced environments is geared towards regular CTFs where as beginner environments can be used for
+// beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
 // TODO Check if environment exists, figure out what the logic should be.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
@@ -32,6 +35,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 		return nil, errors.New("agent not yet initialized")
 	}
 	log.Debug().Msgf("got createEnv request: %v", req)
+
+	if a.EnvPool.DoesEnvExist(req.EventTag) {
+		return nil, fmt.Errorf("environment with tag: \"%s\" already exists", req.EventTag)
+	}
 
 	// Create a new environment for event if it does not exists
 	// Setting up the env config
@@ -42,7 +49,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	log.Debug().Str("envtype", envConf.Type.String()).Msg("making environment with type")
 	// Get exercise info from exercise db
 
-	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
+	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		return nil, fmt.Errorf("error getting exercises: %s", err)
 	}
@@ -59,17 +66,18 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 	envConf.LabConf.ExerciseConfs = exerConfs
 
-	// Insert frontends for environment into environment config
-	var frontends = []vbox.InstanceConfig{}
-	for _, f := range req.Vms {
-		frontend := vbox.InstanceConfig{
-			Image:    f.Image,
-			MemoryMB: uint(f.MemoryMB),
-			CPU:      f.Cpu,
-		}
-		frontends = append(frontends, frontend)
+	frontend := virtual.InstanceConfig{
+		Image:    req.Vm.Image,
+		MemoryMB: uint(req.Vm.MemoryMB),
+		CPU:      req.Vm.Cpu,
 	}
-	envConf.LabConf.Frontends = append(envConf.LabConf.Frontends, frontends...)
+
+	if req.TeamSize == 0 {
+		return nil, errors.New("cannot create env with 0 teamsize")
+	}
+	for i := 0; i < int(req.TeamSize); i++ {
+		envConf.LabConf.Frontends = append(envConf.LabConf.Frontends, frontend)
+	}
 
 	// Set the vlib
 	envConf.LabConf.Vlib = a.vlib
@@ -97,19 +105,20 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 		log.Error().Err(err).Msg("error creating environment")
 		return &proto.StatusResponse{Message: "Error creating environment"}, err
 	}
-	// TODO Still need to figure out how to keep the state of the agent
 
 	// Start the environment
 	go env.Start(context.TODO())
 
-	a.State.EnvPool.AddEnv(&env)
-
+	a.EnvPool.AddEnv(&env)
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
 }
 
 // Closes environment and attached containers/vms, and removes the environment from the event pool
 func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest) (*proto.StatusResponse, error) {
-	env, err := a.State.EnvPool.GetEnv(req.EventTag)
+	env, err := a.EnvPool.GetEnv(req.EventTag)
 	if err != nil {
 		log.Error().Str("envTag", req.EventTag).Msg("error finding finding environment with tag")
 		return nil, fmt.Errorf("error finding environment with tag: %s", req.EventTag)
@@ -122,8 +131,8 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 	vpnIP := strings.ReplaceAll(envConf.VPNAddress, ".240.1/22", "")
 	vpnIPPool.ReleaseIP(vpnIP)
 
-	if err := vbox.RemoveEventFolder(string(envConf.Tag)); err != nil {
-		//do nothing
+	if err := virtual.RemoveEventFolder(string(envConf.Tag)); err != nil {
+		log.Warn().Err(err).Msg("error removing event folder")
 	}
 
 	if err := env.Close(); err != nil {
@@ -133,8 +142,10 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 
 	env.EnvConfig.Status = environment.StatusClosed
 
-	a.State.EnvPool.RemoveEnv(envConf.Tag)
-
+	a.EnvPool.RemoveEnv(envConf.Tag)
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
@@ -142,8 +153,8 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 // It appends the new exercise configs to the existing lab config within the environment.
 // This is used for future labs that may start up.
 // Then it adds the exercises to the existing running labs under this environment.
-func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRequest) (*proto.StatusResponse, error) {
-	env, ok := a.State.EnvPool.Envs[req.EnvTag]
+func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseRequest) (*proto.StatusResponse, error) {
+	env, ok := a.EnvPool.Envs[req.EnvTag]
 	if !ok {
 		log.Error().Str("envTag", req.EnvTag).Msg("error finding finding environment with tag")
 		return nil, fmt.Errorf("error finding environment with tag: %s", req.EnvTag)
@@ -156,7 +167,7 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRe
 	env.M.Lock()
 	defer env.M.Unlock()
 
-	exerDbConfs, err := a.State.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
+	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
 	if err != nil {
 		return nil, fmt.Errorf("error getting exercises: %s", err)
 	}
@@ -171,8 +182,16 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRe
 		json.Unmarshal([]byte(ex), &estruct)
 		exerConfs = append(exerConfs, estruct)
 	}
+	for _, eConf := range env.EnvConfig.LabConf.ExerciseConfs {
+		for _, reqConf := range exerConfs {
+			if eConf.Tag == reqConf.Tag {
+				return nil, fmt.Errorf("exercise already exists in environment: %s", reqConf.Tag)
+			}
+		}
+	}
 	env.EnvConfig.LabConf.ExerciseConfs = append(env.EnvConfig.LabConf.ExerciseConfs, exerConfs...)
 
+	// TODO: Is it a problem to use the workerpool here? Maybe just use a go routine for each lab.
 	var wg sync.WaitGroup
 	ctx = context.Background()
 	for k := range env.Labs {
@@ -187,7 +206,9 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.AddExercisesRe
 		})
 	}
 	wg.Wait()
-
+	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+		log.Error().Err(err).Msg("error saving state")
+	}
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 

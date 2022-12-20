@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -14,7 +13,7 @@ import (
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog/log"
 )
@@ -32,6 +31,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		return Environment{}, err
 	}
 	// Getting wireguard client from config
+	//TODO MAke part of agent initilization
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
@@ -39,11 +39,11 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 	}
 
 	ipT := IPTables{
-		sudo:     true,
-		execFunc: shellExec,
+		Sudo:     true,
+		ExecFunc: ShellExec,
 	}
 
-	dockerHost := docker.NewHost()
+	dockerHost := virtual.NewHost()
 
 	var eventVPNIPs []int
 
@@ -90,6 +90,10 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 				if err := lab.Start(ctx); err != nil {
 					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
 					return
+				}
+
+				if err := env.CreateGuacConn(lab); err != nil {
+					log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
 				}
 
 				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
@@ -156,12 +160,6 @@ func (env *Environment) Start(ctx context.Context) error {
 		log.Error().Err(err).Msg("error initializing vpn endpoint... \n continueing wihout, reininialize from admin webclient")
 	}
 
-	// Start the guac containers
-	if err := env.Guac.Start(ctx); err != nil {
-		log.Error().Err(err).Msg("error starting guac")
-		return errors.New("error while starting guac")
-	}
-
 	env.EnvConfig.Status = StatusRunning
 	return nil
 }
@@ -204,8 +202,8 @@ func (env *Environment) removeVPNConfs() {
 
 	resp, err := env.Wg.ManageNIC(context.Background(), &wg.ManageNICReq{Cmd: "down", Nic: envTag})
 	if err != nil {
-		log.Error().Msgf("Error when disabling VPN connection for event %s", envTag)
-
+		log.Error().Err(err).Msgf("Error when disabling VPN connection for event %s", envTag)
+		return
 	}
 	if resp != nil {
 		log.Info().Str("Message", resp.Message).Msgf("VPN connection is closed for event %s ", envTag)

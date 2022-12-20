@@ -27,8 +27,12 @@ type AgentClient interface {
 	CloseEnvironment(ctx context.Context, in *CloseEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CloseLab(ctx context.Context, in *CloseLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
-	AddExercisesToEnv(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error)
-	AddExercisesToLab(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	AddExercisesToEnv(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	AddExercisesToLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	ResetExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	StartExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	StopExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
 }
 
@@ -85,7 +89,7 @@ func (c *agentClient) CloseLab(ctx context.Context, in *CloseLabRequest, opts ..
 	return out, nil
 }
 
-func (c *agentClient) AddExercisesToEnv(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+func (c *agentClient) AddExercisesToEnv(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/AddExercisesToEnv", in, out, opts...)
 	if err != nil {
@@ -94,9 +98,45 @@ func (c *agentClient) AddExercisesToEnv(ctx context.Context, in *AddExercisesReq
 	return out, nil
 }
 
-func (c *agentClient) AddExercisesToLab(ctx context.Context, in *AddExercisesRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+func (c *agentClient) AddExercisesToLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/AddExercisesToLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) ResetExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/ResetExerciseInLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) StartExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/StartExerciseInLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) StopExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/StopExerciseInLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/Ping", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,8 +184,12 @@ type AgentServer interface {
 	CloseEnvironment(context.Context, *CloseEnvRequest) (*StatusResponse, error)
 	CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error)
 	CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error)
-	AddExercisesToEnv(context.Context, *AddExercisesRequest) (*StatusResponse, error)
-	AddExercisesToLab(context.Context, *AddExercisesRequest) (*StatusResponse, error)
+	AddExercisesToEnv(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	AddExercisesToLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	ResetExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	StartExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	LabStream(*Empty, Agent_LabStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
@@ -169,11 +213,23 @@ func (UnimplementedAgentServer) CreateLabForEnv(context.Context, *CreateLabReque
 func (UnimplementedAgentServer) CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseLab not implemented")
 }
-func (UnimplementedAgentServer) AddExercisesToEnv(context.Context, *AddExercisesRequest) (*StatusResponse, error) {
+func (UnimplementedAgentServer) AddExercisesToEnv(context.Context, *ExerciseRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddExercisesToEnv not implemented")
 }
-func (UnimplementedAgentServer) AddExercisesToLab(context.Context, *AddExercisesRequest) (*StatusResponse, error) {
+func (UnimplementedAgentServer) AddExercisesToLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddExercisesToLab not implemented")
+}
+func (UnimplementedAgentServer) ResetExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetExerciseInLab not implemented")
+}
+func (UnimplementedAgentServer) StartExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartExerciseInLab not implemented")
+}
+func (UnimplementedAgentServer) StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopExerciseInLab not implemented")
+}
+func (UnimplementedAgentServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
@@ -282,7 +338,7 @@ func _Agent_CloseLab_Handler(srv interface{}, ctx context.Context, dec func(inte
 }
 
 func _Agent_AddExercisesToEnv_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddExercisesRequest)
+	in := new(ExerciseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -294,13 +350,13 @@ func _Agent_AddExercisesToEnv_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/agent.Agent/AddExercisesToEnv",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServer).AddExercisesToEnv(ctx, req.(*AddExercisesRequest))
+		return srv.(AgentServer).AddExercisesToEnv(ctx, req.(*ExerciseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Agent_AddExercisesToLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddExercisesRequest)
+	in := new(ExerciseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -312,7 +368,79 @@ func _Agent_AddExercisesToLab_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/agent.Agent/AddExercisesToLab",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServer).AddExercisesToLab(ctx, req.(*AddExercisesRequest))
+		return srv.(AgentServer).AddExercisesToLab(ctx, req.(*ExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_ResetExerciseInLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ResetExerciseInLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/ResetExerciseInLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ResetExerciseInLab(ctx, req.(*ExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_StartExerciseInLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).StartExerciseInLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/StartExerciseInLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).StartExerciseInLab(ctx, req.(*ExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_StopExerciseInLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExerciseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).StopExerciseInLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/StopExerciseInLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).StopExerciseInLab(ctx, req.(*ExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).Ping(ctx, req.(*PingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -372,6 +500,22 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddExercisesToLab",
 			Handler:    _Agent_AddExercisesToLab_Handler,
+		},
+		{
+			MethodName: "ResetExerciseInLab",
+			Handler:    _Agent_ResetExerciseInLab_Handler,
+		},
+		{
+			MethodName: "StartExerciseInLab",
+			Handler:    _Agent_StartExerciseInLab_Handler,
+		},
+		{
+			MethodName: "StopExerciseInLab",
+			Handler:    _Agent_StopExerciseInLab_Handler,
+		},
+		{
+			MethodName: "Ping",
+			Handler:    _Agent_Ping_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

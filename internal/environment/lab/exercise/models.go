@@ -2,17 +2,16 @@ package exercise
 
 import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 )
 
+//todo manage exercise status somehow
 type Exercise struct {
 	ContainerOpts []ContainerOptions
 	VboxOpts      []ExerciseInstanceConfig
 
 	Tag  string
-	Vlib vbox.Library
-	Net  docker.Network
+	Vlib *virtual.VboxLibrary
+	Net  *virtual.Network
 
 	DnsAddr    string
 	DnsRecords []RecordConfig
@@ -21,7 +20,6 @@ type Exercise struct {
 	Machines []virtual.Instance
 }
 
-//todo manage the status somehow
 type ExerciseConfig struct {
 	Tag      string `json:"tag,omitempty"`
 	Name     string `json:"name,omitempty"`
@@ -45,7 +43,7 @@ type ExerciseInstanceConfig struct {
 }
 
 type ContainerOptions struct {
-	DockerConf docker.ContainerConfig
+	DockerConf virtual.ContainerConfig
 	Records    []RecordConfig
 	Challenges []Challenge
 }

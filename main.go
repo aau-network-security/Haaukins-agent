@@ -30,21 +30,25 @@ func main() {
 		return
 	}
 
-	d, err := agent.New(c)
+	a, err := agent.New(c)
 	if err != nil {
 		log.Fatal().Err(err).Msg("unable to create daemon")
 		return
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
 	if err != nil {
 		log.Fatal().Msgf("failed to listen: %v", err)
 	}
 
 	opts := []grpc.ServerOption{}
 
-	gRPCServer := d.NewGRPCServer(opts...)
-	pb.RegisterAgentServer(gRPCServer, d)
+	go func() {
+		a.RunGuacProxy()
+	}()
+
+	gRPCServer := a.NewGRPCServer(opts...)
+	pb.RegisterAgentServer(gRPCServer, a)
 	log.Info().Msg("server is waiting for clients")
 	if err := gRPCServer.Serve(lis); err != nil {
 		log.Fatal().Err(err).Msg("failed to serve")
