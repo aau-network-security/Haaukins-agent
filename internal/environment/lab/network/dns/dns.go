@@ -12,7 +12,7 @@ import (
 
 	"io"
 
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,9 +38,9 @@ const (
 )
 
 type Server struct {
-	cont     docker.Container
-	confFile string
-	io.Closer
+	Cont      *virtual.Container
+	ConfFile  string
+	io.Closer `json:"-"`
 }
 
 type RR struct {
@@ -83,7 +83,7 @@ func New(records []RR) (*Server, error) {
 	c.Write([]byte(coreFileContent))
 
 	f.Sync()
-	cont := docker.NewContainer(docker.ContainerConfig{
+	cont := virtual.NewContainer(virtual.ContainerConfig{
 		Image: "coredns/coredns:1.6.1",
 		Mounts: []string{
 			fmt.Sprintf("%s:/Corefile", coreFile),
@@ -93,7 +93,7 @@ func New(records []RR) (*Server, error) {
 			"53/tcp",
 			"53/udp",
 		},
-		Resources: &docker.Resources{
+		Resources: &virtual.Resources{
 			MemoryMB: 50,
 			CPU:      0.3,
 		},
@@ -104,25 +104,25 @@ func New(records []RR) (*Server, error) {
 	})
 
 	return &Server{
-		cont:     cont,
-		confFile: confFile,
+		Cont:     cont,
+		ConfFile: confFile,
 	}, nil
 }
 
-func (s *Server) Container() docker.Container {
-	return s.cont
+func (s *Server) Container() *virtual.Container {
+	return s.Cont
 }
 
 func (s *Server) Run(ctx context.Context) error {
-	return s.cont.Run(ctx)
+	return s.Cont.Run(ctx)
 }
 
 func (s *Server) Close() error {
-	if err := os.Remove(s.confFile); err != nil {
+	if err := os.Remove(s.ConfFile); err != nil {
 		log.Warn().Msgf("error while removing DNS configuration file: %s", err)
 	}
 
-	if err := s.cont.Close(); err != nil {
+	if err := s.Cont.Close(); err != nil {
 		log.Warn().Msgf("error while closing DNS container: %s", err)
 	}
 
@@ -130,5 +130,5 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) Stop() error {
-	return s.cont.Stop()
+	return s.Cont.Stop()
 }

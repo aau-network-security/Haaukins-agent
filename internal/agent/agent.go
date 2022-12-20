@@ -8,15 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"google.golang.org/grpc"
 
-	"github.com/aau-network-security/haaukins-agent/internal/cache"
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/aau-network-security/haaukins-agent/internal/worker"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
@@ -30,19 +27,14 @@ var configPath string
 type Agent struct {
 	initialized bool
 	config      *Config
-	redis       cache.RedisCache
-	State       *State
+	State       *state.State
 	auth        Authenticator
-	vlib        vbox.Library
+	vlib        *virtual.VboxLibrary
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
 	newLabs    chan pb.Lab
-}
-
-type State struct {
-	m        sync.RWMutex
-	EnvPool  *env.EnvPool `json:"envpool,omitempty"`
-	ExClient eproto.ExerciseStoreClient
+	ExClient   eproto.ExerciseStoreClient
+	EnvPool    *env.EnvPool `json:"envpool,omitempty"`
 }
 
 const DEFAULT_SIGN = "dev-sign-key"
@@ -68,7 +60,7 @@ func NewConfigFromFile(path string) (*Config, error) {
 	}
 
 	if c.GrpcPort == 0 {
-		log.Debug().Msg("port not provided in the configuration file")
+		log.Debug().Int("port",50095).Msg("port not provided in the configuration file using default")
 		c.GrpcPort = 50095
 	}
 
@@ -89,87 +81,44 @@ func NewConfigFromFile(path string) (*Config, error) {
 	// In case paths has not been set, use working directory
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get current working directory for redis")
+		log.Fatal().Err(err).Msg("failed to get current working directory")
 	}
-	if c.RedisDataPath == "" {
-		log.Debug().Msg("redisDataPath not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "data")
+	if c.StatePath == "" {
+		log.Fatal().Msg("statepath not provided in the configuration file\n Please provide a path for the state file to be saved")
 	}
 
 	if c.FileTransferRoot == "" {
 		log.Debug().Msg("filetransfer root not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "filetransfer")
+		c.FileTransferRoot = filepath.Join(pwd, "filetransfer")
 	}
 
 	if c.OvaDir == "" {
 		log.Debug().Msg("ova dir not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "vms")
+		c.OvaDir = filepath.Join(pwd, "vms")
 	}
 
 	for _, repo := range c.DockerRepositories {
-		docker.Registries[repo.ServerAddress] = repo
+		virtual.Registries[repo.ServerAddress] = repo
 	}
 
 	return &c, nil
 }
 
 func New(conf *Config) (*Agent, error) {
-	ctx := context.Background()
 	// Creating filetransfer root if not exists
-	err := vbox.CreateFileTransferRoot(conf.FileTransferRoot)
+	err := virtual.CreateFileTransferRoot(conf.FileTransferRoot)
 	if err != nil {
 		log.Fatal().Msgf("Error while creating file transfer root: %s", err)
 	}
 
-	// Setting up the redis container
-	if _, err := os.Stat(conf.RedisDataPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(conf.RedisDataPath, os.ModePerm)
+	// Setting up the state path
+	if _, err := os.Stat(conf.StatePath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(conf.StatePath, os.ModePerm)
 		if err != nil {
 			log.Error().Err(err).Msg("Error creating dir")
 		}
 	}
 
-	// Check if redis is running
-	container, err := docker.GetRedisContainer(conf.RedisDataPath)
-	if err != nil {
-		log.Error().Err(err).Msg("error getting container state")
-		return nil, err
-	}
-
-	// Container exists checking the state to start the container if it has been stopped
-	if container != nil {
-		log.Debug().Msg("Found already existing redis container")
-		log.Debug().Msgf("Container info: %v", container.Info())
-		if container.Info().State == virtual.Stopped || container.Info().State == virtual.Suspended {
-			log.Debug().Msg("Container not running, restarting the container...")
-			if err := container.Start(ctx); err != nil {
-				log.Fatal().Err(err).Msg("Failed to start existing redis container")
-			}
-			// Waiting for container to start
-			time.Sleep(5)
-		} else {
-			log.Debug().Msg("Container already running, continueing...")
-		}
-	} else {
-		// Didn't detect the redis container, starting a new one...
-		log.Info().Msg("No redis container detected, creating a new one")
-		container = docker.NewContainer(docker.ContainerConfig{
-			Image:     "redis:7.0.4",
-			Name:      "redis_cache",
-			UseBridge: true,
-			Mounts: []string{
-				conf.RedisDataPath + ":/data", // Mounting for persistent storage
-			},
-			PortBindings: map[string]string{
-				"6379": "127.0.0.1:6379",
-			},
-		})
-		if err := container.Run(ctx); err != nil {
-			log.Fatal().Err(err).Msg("Error running new redis container")
-		}
-		// Waiting for container to start
-		time.Sleep(5)
-	}
 	var initialized = true
 	var exClient eproto.ExerciseStoreClient
 	// Check if exercise service has been configured by daemon
@@ -190,25 +139,33 @@ func New(conf *Config) (*Agent, error) {
 	workerPool := worker.NewWorkerPool(conf.MaxWorkers)
 	workerPool.Run()
 
+	vlib := virtual.NewLibrary(conf.OvaDir)
+
+	envPool, err := state.ResumeState(vlib, workerPool, conf.StatePath)
+	if err != nil {
+		log.Error().Err(err).Msg("error resuming state")
+		envPool = &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
+		}
+	}
+	if envPool == nil {
+		envPool = &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
+		}
+	}
 	// Creating agent struct
 	a := &Agent{
 		initialized: initialized,
 		config:      conf,
-		redis: cache.RedisCache{
-			Host: "127.0.0.1:6379",
-			DB:   0,
-		},
-		workerPool: workerPool,
-		vlib:       vbox.NewLibrary(conf.OvaDir),
-		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs:    make(chan pb.Lab, 100),
-		State: &State{
-			ExClient: exClient,
-			EnvPool: &env.EnvPool{
-				M:    &sync.RWMutex{},
-				Envs: make(map[string]*env.Environment),
-			},
-		},
+		workerPool:  workerPool,
+		vlib:        vlib,
+		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs:     make(chan pb.Lab, 100),
+		ExClient:    exClient,
+		EnvPool:     envPool,
+		State:       &state.State{},
 	}
 	return a, nil
 }
@@ -280,6 +237,6 @@ func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.Status
 		return nil, fmt.Errorf("error writing config to file: %s", err)
 	}
 	a.initialized = true
-	a.State.ExClient = exClient
+	a.ExClient = exClient
 	return &proto.StatusResponse{Message: "OK"}, nil
 }

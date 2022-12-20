@@ -48,7 +48,7 @@ func (a *Agent) RunGuacProxy() error {
 func (a *Agent) proxy(c *gin.Context) {
 	envTag := strings.Split(c.Request.Host, ".")[0]
 
-	env, ok := a.State.EnvPool.Envs[envTag]
+	env, ok := a.EnvPool.Envs[envTag]
 	if !ok {
 		c.JSON(http.StatusBadRequest, ProxyResponse{Message: "no guacamole for that event"})
 		return
@@ -79,7 +79,7 @@ func (a *Agent) proxy(c *gin.Context) {
 func (a *Agent) guaclogin(c *gin.Context) {
 	envTag := strings.Split(c.Request.Host, ".")[0]
 
-	_, ok := a.State.EnvPool.Envs[envTag]
+	_, ok := a.EnvPool.Envs[envTag]
 	if !ok {
 		c.JSON(http.StatusBadRequest, ProxyResponse{Message: "no guacamole for that event"})
 		return
@@ -97,55 +97,4 @@ func (a *Agent) guaclogin(c *gin.Context) {
 	})
 }
 
-// // Extracts the jwt from the Authorization header
-// func (a *Agent) jwtExtract(c *gin.Context) string {
-// 	token := c.GetHeader("Authorization")
-// 	log.Debug().Msgf("Using secret key: %s", a.config.JwtSecret)
-// 	return token
-// }
 
-// // Verifies the signature of the JWT token
-// func (a *Agent) jwtVerify(c *gin.Context) (*jwt.Token, error) {
-// 	tokenString := a.jwtExtract(c)
-// 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-// 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-// 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-// 		}
-// 		return []byte(a.config.JwtSecret), nil
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return token, nil
-// }
-
-// // Makes sure that the JWT token is valid
-// func (a *Agent) jwtValidate(c *gin.Context) (jwt.MapClaims, error) {
-// 	token, err := a.jwtVerify(c)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-// 		return claims, nil
-// 	} else {
-// 		log.Printf("Invalid JWT Token")
-// 		return nil, errors.New("token invalid")
-// 	}
-// }
-
-// // Middleware for gin to validate the incoming JWT and deny access if it cannot be validated
-// func (a *Agent) authMiddleware() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		claims, err := a.jwtValidate(c)
-// 		if err != nil {
-// 			c.AbortWithStatusJSON(http.StatusUnauthorized, ProxyResponse{Message: "Invalid JWT"})
-// 			return
-// 		}
-// 		// Passing jwt claims to next handler function in the gin context
-// 		c.Set("jti", claims["jti"])
-// 		c.Set("exp", claims["exp"])
-// 		c.Set("sub", claims["sub"])
-// 		c.Next()
-// 	}
-// }

@@ -32,6 +32,7 @@ type AgentClient interface {
 	ResetExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	StartExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	StopExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
 }
 
@@ -133,6 +134,15 @@ func (c *agentClient) StopExerciseInLab(ctx context.Context, in *ExerciseRequest
 	return out, nil
 }
 
+func (c *agentClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentClient) LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Agent_ServiceDesc.Streams[0], "/agent.Agent/LabStream", opts...)
 	if err != nil {
@@ -179,6 +189,7 @@ type AgentServer interface {
 	ResetExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	StartExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	LabStream(*Empty, Agent_LabStreamServer) error
 	mustEmbedUnimplementedAgentServer()
 }
@@ -216,6 +227,9 @@ func (UnimplementedAgentServer) StartExerciseInLab(context.Context, *ExerciseReq
 }
 func (UnimplementedAgentServer) StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StopExerciseInLab not implemented")
+}
+func (UnimplementedAgentServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
@@ -413,6 +427,24 @@ func _Agent_StopExerciseInLab_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Agent_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Agent_LabStream_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -480,6 +512,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StopExerciseInLab",
 			Handler:    _Agent_StopExerciseInLab_Handler,
+		},
+		{
+			MethodName: "Ping",
+			Handler:    _Agent_Ping_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
