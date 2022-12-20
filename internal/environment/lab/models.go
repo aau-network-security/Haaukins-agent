@@ -6,8 +6,7 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dhcp"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 )
 
 type Lab struct {
@@ -15,23 +14,24 @@ type Lab struct {
 	Tag               string
 	Type              LabType
 	Frontends         map[uint]FrontendConf
-	ExTags            map[string]*exercise.Exercise
-	Exercises         []*exercise.Exercise
+	Exercises         map[string]*exercise.Exercise
 	ExerciseConfigs   []exercise.ExerciseConfig
 	DisabledExercises []string
 	DnsRecords        []*DNSRecord
-	DockerHost        docker.Host
-	Network           docker.Network
+	DockerHost        virtual.Host
+	Network           *virtual.Network
 	DnsServer         *dns.Server
 	DhcpServer        *dhcp.Server
 	DnsAddress        string
-	Vlib              vbox.Library
+	Vlib              *virtual.VboxLibrary
 	IsVPN             bool
+	GuacUsername      string
+	GuacPassword      string
 }
 
 type LabConf struct {
-	Vlib              vbox.Library
-	Frontends         []vbox.InstanceConfig
+	Vlib              *virtual.VboxLibrary
+	Frontends         []virtual.InstanceConfig
 	ExerciseConfs     []exercise.ExerciseConfig
 	DisabledExercises []string
 }
@@ -41,6 +41,6 @@ type DNSRecord struct {
 }
 
 type FrontendConf struct {
-	vm   vbox.VM
-	conf vbox.InstanceConfig
+	Vm   *virtual.Vm
+	Conf virtual.InstanceConfig
 }

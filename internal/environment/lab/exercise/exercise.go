@@ -8,8 +8,6 @@ import (
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
@@ -25,7 +23,7 @@ var (
 )
 
 // TODO add comments
-func NewExercise(conf ExerciseConfig, vlib vbox.Library, net docker.Network, dnsAddr string) *Exercise {
+func NewExercise(conf ExerciseConfig, vlib *virtual.VboxLibrary, net *virtual.Network, dnsAddr string) *Exercise {
 	var containerOpts []ContainerOptions
 	var vboxOpts []ExerciseInstanceConfig
 	var ex *Exercise
@@ -103,7 +101,7 @@ func (e *Exercise) Create(ctx context.Context) error {
 	}
 
 	for _, vboxConf := range e.VboxOpts {
-		vmConf := vbox.InstanceConfig{
+		vmConf := virtual.InstanceConfig{
 			Image:    vboxConf.Image,
 			CPU:      vboxConf.CPU,
 			MemoryMB: vboxConf.MemoryMB,
@@ -111,7 +109,7 @@ func (e *Exercise) Create(ctx context.Context) error {
 		vm, err := e.Vlib.GetCopy(
 			ctx,
 			vmConf,
-			vbox.SetBridge(e.Net.Interface()),
+			virtual.SetBridge(e.Net.Interface()),
 		)
 		if err != nil {
 			return err
@@ -148,6 +146,7 @@ func (e *Exercise) Start(ctx context.Context) error {
 	return res
 }
 
+// TODO: Add multierror or go routine
 func (e *Exercise) Stop(ctx context.Context) error {
 	for _, m := range e.Machines {
 		if err := m.Stop(); err != nil {
@@ -192,8 +191,8 @@ func (e *Exercise) Close() error {
 	return nil
 }
 
-func CreateContainer(ctx context.Context, conf docker.ContainerConfig) (docker.Container, error) {
-	c := docker.NewContainer(conf)
+func CreateContainer(ctx context.Context, conf virtual.ContainerConfig) (*virtual.Container, error) {
+	c := virtual.NewContainer(conf)
 	err := c.Create(ctx)
 
 	return c, err
@@ -233,12 +232,12 @@ func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 
 		// docker config
 
-		spec := docker.ContainerConfig{}
+		spec := virtual.ContainerConfig{}
 
 		if !e.Static {
-			spec = docker.ContainerConfig{
+			spec = virtual.ContainerConfig{
 				Image: conf.Image,
-				Resources: &docker.Resources{
+				Resources: &virtual.Resources{
 					MemoryMB: conf.MemoryMB,
 					CPU:      conf.CPU,
 				},
@@ -273,4 +272,12 @@ func (e *Exercise) GetChallenges() []Challenge {
 	}
 
 	return challenges
+}
+
+func (e *Exercise) InstanceInfo() []virtual.InstanceInfo {
+	var instances []virtual.InstanceInfo
+	for _, m := range e.Machines {
+		instances = append(instances, m.Info())
+	}
+	return instances
 }

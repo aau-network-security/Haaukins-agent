@@ -10,8 +10,6 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dhcp"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/docker"
-	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual/vbox"
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
@@ -39,17 +37,18 @@ func (lType LabType) String() string {
 	return ""
 }
 
-
-
 // TODO Add comments to remaining functions
 
 // Creates and starts a new virtual lab
 func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType LabType, eventTag string) (Lab, error) {
 	lab := Lab{
 		M:               &sync.RWMutex{},
-		ExTags:          make(map[string]*exercise.Exercise),
+		Exercises:       make(map[string]*exercise.Exercise),
 		Vlib:            lc.Vlib,
 		ExerciseConfigs: lc.ExerciseConfs,
+		GuacUsername:    uuid.New().String()[0:8],
+		GuacPassword:    uuid.New().String()[0:8],
+		IsVPN:           isVPN,
 	}
 
 	// Create lab network
@@ -65,7 +64,7 @@ func (lc *LabConf) NewLab(ctx context.Context, isVPN bool, labType LabType, even
 		}
 	}
 
-	lab.DockerHost = docker.NewHost()
+	lab.DockerHost = virtual.NewHost()
 
 	// Generate unique tag for lab
 	lab.Tag = generateTag(eventTag)
@@ -124,7 +123,7 @@ func (l *Lab) Start(ctx context.Context) error {
 	}
 
 	for _, fconf := range l.Frontends {
-		if err := fconf.vm.Start(ctx); err != nil {
+		if err := fconf.Vm.Start(ctx); err != nil {
 			return err
 		}
 	}
@@ -135,13 +134,13 @@ func (l *Lab) Close() error {
 	var wg sync.WaitGroup
 	for _, lab := range l.Frontends {
 		wg.Add(1)
-		go func(vm vbox.VM) {
+		go func(vm *virtual.Vm) {
 			// closing VMs....
 			defer wg.Done()
 			if err := vm.Close(); err != nil {
 				log.Error().Msgf("Error on Close function in lab.go %s", err)
 			}
-		}(lab.vm)
+		}(lab.Vm)
 	}
 	wg.Add(1)
 	go func() {
@@ -217,7 +216,7 @@ func (l *Lab) RefreshDNS(ctx context.Context) error {
 
 // CreateNetwork network
 func (l *Lab) CreateNetwork(ctx context.Context, isVPN bool) error {
-	network, err := docker.NewNetwork(isVPN)
+	network, err := virtual.NewNetwork(isVPN)
 	if err != nil {
 		return fmt.Errorf("docker new network err %v", err)
 	}
@@ -227,7 +226,7 @@ func (l *Lab) CreateNetwork(ctx context.Context, isVPN bool) error {
 	return nil
 }
 
-func (l *Lab) addFrontend(ctx context.Context, conf vbox.InstanceConfig, rdpPort uint) (vbox.VM, error) {
+func (l *Lab) addFrontend(ctx context.Context, conf virtual.InstanceConfig, rdpPort uint) (*virtual.Vm, error) {
 	hostIp, err := l.DockerHost.GetDockerHostIP()
 	if err != nil {
 		return nil, err
@@ -246,22 +245,44 @@ func (l *Lab) addFrontend(ctx context.Context, conf vbox.InstanceConfig, rdpPort
 	vm, err := l.Vlib.GetCopy(
 		ctx,
 		conf,
-		vbox.SetBridge(l.Network.Interface()),
-		vbox.SetLocalRDP(hostIp, rdpPort),
-		vbox.SetRAM(mem),
+		virtual.SetBridge(l.Network.Interface()),
+		virtual.SetLocalRDP(hostIp, rdpPort),
+		virtual.SetRAM(mem),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	l.Frontends[rdpPort] = FrontendConf{
-		vm:   vm,
-		conf: conf,
+		Vm:   vm,
+		Conf: conf,
 	}
 
 	log.Debug().Msgf("Created lab frontend on port %d", rdpPort)
 
 	return vm, nil
+}
+
+// Get a list of ports for the VMs running in the lab
+func (l *Lab) RdpConnPorts() []uint {
+	var ports []uint
+	for p := range l.Frontends {
+		ports = append(ports, p)
+	}
+
+	return ports
+}
+
+// Get a list of instance information for the VMs and exercises running in the lab
+func (l *Lab) InstanceInfo() []virtual.InstanceInfo {
+	var instances []virtual.InstanceInfo
+	for _, fconf := range l.Frontends {
+		instances = append(instances, fconf.Vm.Info())
+	}
+	for _, e := range l.Exercises {
+		instances = append(instances, e.InstanceInfo()...)
+	}
+	return instances
 }
 
 //prepends a uuid to the eventTag

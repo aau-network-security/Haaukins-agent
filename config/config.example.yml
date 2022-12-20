@@ -1,13 +1,14 @@
 host: localhost
-port: 8081
+grpcPort: 8081
+proxyPort: 8082
 auth-key: test-auth-key
 sign-key: test-sign-key
 max-workers: 5
 guac-ssl: false
-
-redis-data-path: /path/to/desired/redis/data
+jwtSecret: test
 file-transfer-root: /path/to/desired/filetransfer/root
 ova-dir: /path/to/desired/ova/directory
+state-path: /path/to/desired/state/directory
 
 exercise-service:
   grpc: "localhost:port"
