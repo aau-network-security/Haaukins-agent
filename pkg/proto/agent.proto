@@ -94,12 +94,24 @@ message Lab {
     string tag = 1;
     string eventTag = 2;
     repeated Exercise exercises = 3;
-    uint32 guacPort = 4;
     bool isVPN = 5;
 }
 
 message Exercise {
     string tag = 1;
-    repeated string flags = 2;
-    repeated string errors = 3;
+    repeated ChildExercise childExercises = 2;
+    repeated Machine machines = 3;
+}
+
+message ChildExercise {
+    string tag = 1;
+    string flag = 2;
+}
+
+message Machine {
+    string id = 1;
+    string status = 2;
+    string image = 3;
+    repeated string errors = 4;
+    string type = 5;
 }

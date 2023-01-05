@@ -162,7 +162,7 @@ func New(conf *Config) (*Agent, error) {
 		workerPool:  workerPool,
 		vlib:        vlib,
 		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs:     make(chan pb.Lab, 100),
+		newLabs:     make(chan pb.Lab, 1000),
 		ExClient:    exClient,
 		EnvPool:     envPool,
 		State:       &state.State{},

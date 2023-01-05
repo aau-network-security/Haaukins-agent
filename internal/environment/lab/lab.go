@@ -17,7 +17,7 @@ import (
 
 const defaultImageMEMMB = 4096
 
-type LabType uint8
+type LabType uint32
 
 const (
 	// LabType

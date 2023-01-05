@@ -75,6 +75,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 		newLab := proto.Lab{
 			Tag:      lab.Tag,
 			EventTag: ec.Tag,
+			Exercises: lab.GetExercisesInfo(),
 			IsVPN:    req.IsVPN,
 		}
 

@@ -147,9 +147,11 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 				// Sending lab info to daemon
 				// TODO Figure out what exact data should be returned to daemon
 				// TODO use new getChallenges function to get challenges for lab to return flag etc.
+
 				newLab := proto.Lab{
 					Tag:      lab.Tag,
 					EventTag: envConf.Tag,
+					Exercises: lab.GetExercisesInfo(),
 					IsVPN:    false,
 				}
 				//a.newLabs = append(a.newLabs, newLab)

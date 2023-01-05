@@ -21,6 +21,19 @@ const (
 
 type State int
 
+func (s State) String() string {
+    switch s {
+	case Running:
+		return "running"
+	case Stopped:
+		return "stopped"
+	case Suspended:
+		return "suspended"
+	default:
+		return "unknown"
+	}
+}
+
 type InstanceInfo struct {
 	Image string
 	Type  string
