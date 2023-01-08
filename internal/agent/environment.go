@@ -153,6 +153,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 					EventTag: envConf.Tag,
 					Exercises: lab.GetExercisesInfo(),
 					IsVPN:    false,
+					GuacCreds: &proto.GuacCreds{
+						Username: lab.GuacUsername,
+						Password: lab.GuacPassword,
+					},
 				}
 				//a.newLabs = append(a.newLabs, newLab)
 				a.newLabs <- newLab

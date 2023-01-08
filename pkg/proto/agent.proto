@@ -94,7 +94,8 @@ message Lab {
     string tag = 1;
     string eventTag = 2;
     repeated Exercise exercises = 3;
-    bool isVPN = 5;
+    bool isVPN = 4;
+    GuacCreds guacCreds = 5;
 }
 
 message Exercise {
@@ -114,4 +115,9 @@ message Machine {
     string image = 3;
     repeated string errors = 4;
     string type = 5;
+}
+
+message GuacCreds {
+    string username = 1;
+    string password = 2;
 }

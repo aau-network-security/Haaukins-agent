@@ -70,13 +70,17 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			}
 			return
 		}
-		
+
 		// Sending lab info to daemon
 		newLab := proto.Lab{
-			Tag:      lab.Tag,
-			EventTag: ec.Tag,
+			Tag:       lab.Tag,
+			EventTag:  ec.Tag,
 			Exercises: lab.GetExercisesInfo(),
-			IsVPN:    req.IsVPN,
+			IsVPN:     req.IsVPN,
+			GuacCreds: &proto.GuacCreds{
+				Username: lab.GuacUsername,
+				Password: lab.GuacPassword,
+			},
 		}
 
 		//a.newLabs = append(a.newLabs, newLab)
