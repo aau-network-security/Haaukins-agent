@@ -6,6 +6,7 @@ import "github.com/rs/zerolog/log"
 type WorkerPool interface {
 	Run()
 	AddTask(task func())
+	GetAmountOfQueuedTasks() uint32
 }
 
 type workerPool struct {
@@ -31,6 +32,10 @@ func (wp *workerPool) Run() {
 			}
 		}(i + 1)
 	}
+}
+
+func (wp *workerPool) GetAmountOfQueuedTasks() uint32 {
+	return uint32(len(wp.queuedTasks))
 }
 
 func (wp *workerPool) AddTask(task func()) {

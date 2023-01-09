@@ -54,19 +54,20 @@ func (a *Agent) MonitorStream(stream proto.Agent_MonitorStreamServer) error {
 
 		}
 		vmCount, err := virtual.GetRunningVmCount()
-		if err!= nil {
+		if err != nil {
 			log.Error().Err(err).Msg("error getting running vm count")
 		}
 
 		resp := &proto.MonitorResponse{
-			Hb: "alive",
+			Hb:          "alive",
+			QueuedTasks: a.workerPool.GetAmountOfQueuedTasks(),
 			Resources: &proto.Resources{
-				Cpu:          cpuPerc[0],
-				Mem:          memory.UsedPercent,
-				MemAvailable: memory.Available,
-				LabCount:    a.EnvPool.GetFullLabCount(),
+				Cpu:            cpuPerc[0],
+				Mem:            memory.UsedPercent,
+				MemAvailable:   memory.Available,
+				LabCount:       a.EnvPool.GetFullLabCount(),
 				ContainerCount: containerCount,
-				VmCount: vmCount,
+				VmCount:        vmCount,
 			},
 		}
 

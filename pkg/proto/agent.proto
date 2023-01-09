@@ -24,7 +24,7 @@ message MonitorResponse {
     string hb = 1;
     repeated Lab newLabs = 2;
     Resources resources = 3;
-    
+    uint32 queuedTasks = 4;
 }
 
 message Resources {
