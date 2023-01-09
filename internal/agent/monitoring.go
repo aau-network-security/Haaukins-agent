@@ -71,6 +71,7 @@ func (a *Agent) MonitorStream(stream proto.Agent_MonitorStreamServer) error {
 			},
 		}
 
+		// TODO add frontend info (Kali) to newlab
 	L:
 		for {
 			select {
