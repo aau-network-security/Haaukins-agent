@@ -30,10 +30,11 @@ message MonitorResponse {
 message Resources {
     uint64 memAvailable = 1;
     double cpu = 2;
-    double mem = 3;
+    double memPercentUsed = 3;
     uint32 labCount = 4;
     uint32 vmCount = 5;
     uint32 containerCount = 6;
+    uint64 memInstalled = 7;
 }
 
 message InitRequest {
@@ -49,6 +50,7 @@ message PingRequest {
 
 message PingResponse {
     string pong = 1;
+    uint64 memInstalled = 2;
 }
 
 message CreatEnvRequest {

@@ -15,7 +15,13 @@ import (
 // Used for the daemon to check the connection to the agent when initially connecting
 func (a *Agent) Ping(ctx context.Context, req *proto.PingRequest) (*proto.PingResponse, error) {
 	if req.Ping == "ping" {
-		return &proto.PingResponse{Pong: "pong"}, nil
+		memory, err := mem.VirtualMemory()
+		if err != nil {
+			log.Error().Err(err).Msg("error reading memory percentage")
+			memory = &mem.VirtualMemoryStat{}
+			memory.Total = 0
+		}
+		return &proto.PingResponse{Pong: "pong", MemInstalled: memory.Total}, nil
 	}
 	return &proto.PingResponse{Pong: "the hell is that kind of ping?"}, nil
 }
@@ -63,8 +69,9 @@ func (a *Agent) MonitorStream(stream proto.Agent_MonitorStreamServer) error {
 			QueuedTasks: a.workerPool.GetAmountOfQueuedTasks(),
 			Resources: &proto.Resources{
 				Cpu:            cpuPerc[0],
-				Mem:            memory.UsedPercent,
+				MemPercentUsed: memory.UsedPercent,
 				MemAvailable:   memory.Available,
+				MemInstalled:   memory.Total,
 				LabCount:       a.EnvPool.GetFullLabCount(),
 				ContainerCount: containerCount,
 				VmCount:        vmCount,
