@@ -97,6 +97,49 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
+func (a *Agent) CreateVpnConfForLab(ctx context.Context, req *proto.CreateVpnConfRequest) (*proto.CreateVpnConfResponse, error) {
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	if !l.IsVPN {
+		return nil, errors.New("cannot create vpn connection for lab that is not a VPN lab")
+	}
+
+	envTag := strings.Split(l.Tag, "-")[0]
+
+	env, err := a.EnvPool.GetEnv(envTag)
+	if err != nil {
+		log.Error().Str("envTag", envTag).Msg("error finding finding environment with tag")
+		return nil, fmt.Errorf("error finding environment with tag: %s", envTag)
+	}
+	if _, ok := env.IpRules[l.Tag]; ok {
+		return nil, errors.New("VPN configs already generated for this lab")
+	}
+
+	vpnConfig := lab.VpnConfig{
+		Host:            a.config.Host,
+		VpnAddress:      env.EnvConfig.VPNAddress,
+		VPNEndpointPort: env.EnvConfig.VPNEndpointPort,
+		IpAddresses:     env.IpAddrs,
+	}
+
+	labConfigsFiles, vpnIPs, err := l.CreateVPNConn(env.Wg, envTag, vpnConfig)
+
+	env.IpT.CreateRejectRule(l.DhcpServer.Subnet)
+	env.IpT.CreateStateRule(l.DhcpServer.Subnet)
+	env.IpT.CreateAcceptRule(l.DhcpServer.Subnet, strings.Join(vpnIPs, ","))
+	env.IpRules[l.Tag] = environment.IpRules{
+		Labsubnet: l.DhcpServer.Subnet,
+		VpnIps:    strings.Join(vpnIPs, ","),
+	}
+
+	state.SaveState(a.EnvPool, a.config.StatePath)
+	return &proto.CreateVpnConfResponse{Configs: labConfigsFiles}, nil
+}
+
 // Shuts down and removes all frontends and containers related to specific lab. Then removes it from the environment's lab map.
 func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*proto.StatusResponse, error) {
 	l, err := a.EnvPool.GetLabByTag(req.LabTag)

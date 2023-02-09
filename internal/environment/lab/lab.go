@@ -4,8 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
+	wgproto "github.com/aau-network-security/gwireguard/proto" //v1.0.3
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dhcp"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/dns"
@@ -23,6 +28,12 @@ const (
 	// LabType
 	TypeBeginner LabType = iota
 	TypeAdvanced
+)
+
+const (
+	vpnInfo          = "https://gitlab.com/-/snippets/2096681/raw/master/instructions.txt"
+	installWireguard = "https://gitlab.com/-/snippets/2102002/raw/master/install_wireguard.sh"
+	connectWireguard = "https://gitlab.com/-/snippets/2102000/raw/master/connectwireguard.py"
 )
 
 func (lType LabType) String() string {
@@ -285,8 +296,167 @@ func (l *Lab) InstanceInfo() []virtual.InstanceInfo {
 	return instances
 }
 
-//prepends a uuid to the eventTag
+// prepends a uuid to the eventTag
 func generateTag(eventTag string) string {
 	id := uuid.New()
 	return fmt.Sprintf("%s-%s", eventTag, id)
+}
+
+func getDNSRecords(records []*DNSRecord) []string {
+	var hosts []string
+	for _, r := range records {
+		for ip, arecord := range r.Record {
+			hosts = append(hosts, fmt.Sprintf("%s \t %s", ip, arecord))
+		}
+	}
+	return hosts
+}
+
+type VpnConfig struct {
+	Host            string
+	VpnAddress      string
+	VPNEndpointPort int
+	IpAddresses     []int
+}
+
+func (lab *Lab) CreateVPNConn(wgClient wgproto.WireguardClient, envTag string, vpnConfig VpnConfig) ([]string, []string, error) {
+	var labConfigFiles []string
+	lowBound := 240
+	upperBound := 244
+	ctx := context.Background()
+	var vpnIPs []string
+	vpnInstructions := getContent(vpnInfo)
+	// var hosts string
+	// for _, r := range lab.DnsRecords {
+	// 	for ip, arecord := range r.Record {
+	// 		hosts += fmt.Sprintf("# %s \t %s \n", ip, arecord)
+	// 	}
+
+	// }
+	//labSubnet := fmt.Sprintf("%s/24", lab.Network.Subnet)
+	// random.random.240.1/22
+	subnet := vpnConfig.VpnAddress
+
+	// retrieve domain from configuration file
+	endpoint := fmt.Sprintf("%s.%s:%d", envTag, vpnConfig.Host, vpnConfig.VPNEndpointPort)
+
+	// get public key of server
+	log.Info().Msg("Getting server public key...")
+	serverPubKey, err := wgClient.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag, PrivKeyName: envTag})
+	if err != nil {
+		return []string{}, []string{}, err
+	}
+
+	// create 4 different config file for 1 user
+	for i := lowBound; i < upperBound; i++ {
+
+		// generate client privatekey
+		ipAddr := pop(&vpnConfig.IpAddresses)
+
+		log.Info().Msgf("Generating privatekey for lab %s", envTag+"_"+lab.Tag)
+		_, err = wgClient.GenPrivateKey(ctx, &wgproto.PrivKeyReq{PrivateKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+		if err != nil {
+			return []string{}, []string{}, err
+		}
+
+		// generate client public key
+		log.Info().Msgf("Generating public key for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
+		_, err = wgClient.GenPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr), PrivKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+		if err != nil {
+			return []string{}, []string{}, err
+		}
+		// get client public key
+		log.Info().Msgf("Retrieving public key for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
+		resp, err := wgClient.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+		if err != nil {
+			log.Error().Msgf("Error on GetPublicKey %v", err)
+			return []string{}, []string{}, err
+		}
+
+		peerIP := strings.Replace(subnet, "240.1/22", fmt.Sprintf("%d.%d/32", i, ipAddr), 2)
+		gwIP := strings.Replace(subnet, "1/22", fmt.Sprintf("1/32"), 1)
+		log.Info().Str("NIC", envTag).
+			Str("AllowedIPs", peerIP).
+			Str("PublicKey ", resp.Message).Msgf("Generating ip address for lab %s, ip address of peer is %s ", lab.Tag, peerIP)
+		addPeerResp, err := wgClient.AddPeer(ctx, &wgproto.AddPReq{
+			Nic:        envTag,
+			AllowedIPs: peerIP,
+			PublicKey:  resp.Message,
+		})
+		if err != nil {
+			log.Error().Msgf("Error on adding peer to interface %v", err)
+			return []string{}, []string{}, err
+		}
+		log.Info().Str("Event: ", envTag).
+			Str("Lab: ", lab.Tag).Msgf("Message : %s", addPeerResp.Message)
+		//get client privatekey
+		log.Info().Msgf("Retrieving private key for lab %s", lab.Tag)
+		labPrivKey, err := wgClient.GetPrivateKey(ctx, &wgproto.PrivKeyReq{PrivateKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+		if err != nil {
+			return []string{}, []string{}, err
+		}
+		log.Info().Msgf("Private key for lab %s is %s ", lab.Tag, labPrivKey.Message)
+		log.Info().Msgf("Client configuration is created for server %s", endpoint)
+		// creating client configuration file
+		clientConfig := fmt.Sprintf(
+			`[Interface]
+Address = %s
+PrivateKey = %s
+MTU = 1420
+[Peer]
+PublicKey = %s
+AllowedIps = %s,%s
+Endpoint =  %s
+PersistentKeepalive = 25
+
+# --------------------------------------------------------------------------
+#  YOUR LAB SUBNET IS:  %s 													
+# --------------------------------------------------------------------------
+
+######### << USER SCRIPTS >> #####
+#  
+#	Use following scripts to install wireguard and connect to lab. 
+#
+#   Install Wireguard: %s 
+#  	
+#	Connect Event:  %s
+#
+#   The scripts are automating steps which you do manually. Use them with your responsibility.
+#   If you notice outdated information, help us to update it :) 
+#
+####################
+
+####### SETTING VPN CONFIGURATION #########
+
+%s
+
+`, peerIP, labPrivKey.Message, serverPubKey.Message, lab.DhcpServer.Subnet, gwIP, endpoint, lab.DhcpServer.Subnet, installWireguard, connectWireguard, vpnInstructions)
+		labConfigFiles = append(labConfigFiles, clientConfig)
+		vpnIPs = append(vpnIPs, peerIP)
+	}
+
+	vpnIPs = append(vpnIPs, lab.DhcpServer.Subnet)
+	return labConfigFiles, vpnIPs, nil
+}
+
+// get page content
+func getContent(link string) string {
+	res, err := http.Get(link)
+	if err != nil {
+		log.Debug().Msgf("Error on retrieving link [ %s ] Err: [ %v ]", link, err)
+	}
+	content, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		log.Debug().Msgf("Read error content [ %s ] Err: [ %v ]", link, err)
+	}
+	return string(content)
+}
+
+// pop function is somehow same with python pop function
+func pop(alist *[]int) int {
+	f := len(*alist)
+	rv := (*alist)[f-1]
+	*alist = append((*alist)[:f-1])
+	return rv
 }

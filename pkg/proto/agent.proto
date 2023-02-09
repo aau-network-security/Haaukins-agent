@@ -8,6 +8,7 @@ service Agent {
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
     rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
+    rpc CreateVpnConfForLab(CreateVpnConfRequest) returns (CreateVpnConfResponse) {}
     rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
     rpc AddExercisesToEnv (ExerciseRequest) returns (StatusResponse) {}
     rpc AddExercisesToLab(ExerciseRequest) returns (StatusResponse) {}
@@ -69,6 +70,14 @@ message CloseEnvRequest {
 message CreateLabRequest{
     string eventTag = 1;
     bool isVPN = 2;
+}
+
+message CreateVpnConfRequest {
+    string labTag = 1;
+}
+
+message CreateVpnConfResponse {
+    repeated string configs = 1;
 }
 
 message CloseLabRequest {

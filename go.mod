@@ -3,6 +3,7 @@ module github.com/aau-network-security/haaukins-agent
 go 1.18
 
 require (
+	github.com/aau-network-security/gwireguard v1.0.3
 	github.com/aau-network-security/haaukins-exercises v1.2.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsouza/go-dockerclient v1.8.3

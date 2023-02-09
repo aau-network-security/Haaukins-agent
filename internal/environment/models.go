@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"sync"
 
+	wgproto "github.com/aau-network-security/gwireguard/proto" //v1.0.3
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
@@ -23,7 +24,7 @@ type Environment struct {
 	IpT           IPTables
 	IpRules       map[string]IpRules
 	IpAddrs       []int
-	Wg            wg.WireguardClient
+	Wg            wgproto.WireguardClient
 	GuacUserStore *GuacUserStore
 	Dockerhost    virtual.Host
 	Labs          map[string]*lab.Lab

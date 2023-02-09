@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	wgproto "github.com/aau-network-security/gwireguard/proto" //v1.0.3
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
@@ -30,7 +31,6 @@ func (ec *EnvConfig) NewEnv(ctx context.Context) (*Environment, error) {
 		return nil, err
 	}
 	// Getting wireguard client from config
-	//TODO MAke part of agent initilization
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
@@ -88,7 +88,7 @@ func (env *Environment) Start(ctx context.Context) error {
 
 	// Initializing wireguard for the port
 	log.Info().Int("port", port).Msg("initializing VPN endpoinrt on port")
-	_, err := env.Wg.InitializeI(context.Background(), &wg.IReq{
+	_, err := env.Wg.InitializeI(context.Background(), &wgproto.IReq{
 		Address:    env.EnvConfig.VPNAddress,
 		ListenPort: uint32(port),
 		SaveConfig: true,
@@ -131,9 +131,9 @@ func (env *Environment) Close() error {
 func (env *Environment) removeIPTableRules() {
 	for tid, ipR := range env.IpRules {
 		log.Debug().Str("Team ID ", tid).Msgf("iptables are removing... ")
-		env.IpT.removeRejectRule(ipR.Labsubnet)
-		env.IpT.removeStateRule(ipR.Labsubnet)
-		env.IpT.removeAcceptRule(ipR.Labsubnet, ipR.VpnIps)
+		env.IpT.RemoveRejectRule(ipR.Labsubnet)
+		env.IpT.RemoveStateRule(ipR.Labsubnet)
+		env.IpT.RemoveAcceptRule(ipR.Labsubnet, ipR.VpnIps)
 	}
 }
 
@@ -141,7 +141,7 @@ func (env *Environment) removeVPNConfs() {
 	envTag := env.EnvConfig.Tag
 	log.Debug().Msgf("Closing VPN connection for event %s", envTag)
 
-	resp, err := env.Wg.ManageNIC(context.Background(), &wg.ManageNICReq{Cmd: "down", Nic: envTag})
+	resp, err := env.Wg.ManageNIC(context.Background(), &wgproto.ManageNICReq{Cmd: "down", Nic: envTag})
 	if err != nil {
 		log.Error().Err(err).Msgf("Error when disabling VPN connection for event %s", envTag)
 		return

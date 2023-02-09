@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"google.golang.org/grpc/status"
-
+	wgproto "github.com/aau-network-security/gwireguard/proto" //v1.0.3
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -52,7 +52,7 @@ func (c Creds) RequireTransportSecurity() bool {
 	return !c.Insecure
 }
 
-func NewGRPCVPNClient(wgConn WireGuardConfig) (WireguardClient, error) {
+func NewGRPCVPNClient(wgConn WireGuardConfig) (wgproto.WireguardClient, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		AUTH_KEY: wgConn.AuthKey,
@@ -111,7 +111,7 @@ func NewGRPCVPNClient(wgConn WireGuardConfig) (WireguardClient, error) {
 			log.Error().Msgf("Error on dialing vpn service: %v", err)
 			return nil, TranslateRPCErr(err)
 		}
-		c := NewWireguardClient(conn)
+		c := wgproto.NewWireguardClient(conn)
 		return c, nil
 	}
 
@@ -120,7 +120,7 @@ func NewGRPCVPNClient(wgConn WireGuardConfig) (WireguardClient, error) {
 	if err != nil {
 		return nil, TranslateRPCErr(err)
 	}
-	c := NewWireguardClient(conn)
+	c := wgproto.NewWireguardClient(conn)
 	return c, nil
 }
 
