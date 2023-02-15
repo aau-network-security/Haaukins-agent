@@ -317,6 +317,7 @@ type VpnConfig struct {
 	VpnAddress      string
 	VPNEndpointPort int
 	IpAddresses     []int
+	LabSubnet       string
 }
 
 func (lab *Lab) CreateVPNConn(wgClient wgproto.WireguardClient, envTag string, vpnConfig VpnConfig) ([]string, []string, error) {
@@ -333,9 +334,9 @@ func (lab *Lab) CreateVPNConn(wgClient wgproto.WireguardClient, envTag string, v
 	// 	}
 
 	// }
-	//labSubnet := fmt.Sprintf("%s/24", lab.Network.Subnet)
+
 	// random.random.240.1/22
-	subnet := vpnConfig.VpnAddress
+	vpnSubnet := vpnConfig.VpnAddress
 
 	// retrieve domain from configuration file
 	endpoint := fmt.Sprintf("%s.%s:%d", envTag, vpnConfig.Host, vpnConfig.VPNEndpointPort)
@@ -373,8 +374,8 @@ func (lab *Lab) CreateVPNConn(wgClient wgproto.WireguardClient, envTag string, v
 			return []string{}, []string{}, err
 		}
 
-		peerIP := strings.Replace(subnet, "240.1/22", fmt.Sprintf("%d.%d/32", i, ipAddr), 2)
-		gwIP := strings.Replace(subnet, "1/22", fmt.Sprintf("1/32"), 1)
+		peerIP := strings.Replace(vpnSubnet, "240.1/22", fmt.Sprintf("%d.%d/32", i, ipAddr), 2)
+		gwIP := strings.Replace(vpnSubnet, "1/22", fmt.Sprintf("1/32"), 1)
 		log.Info().Str("NIC", envTag).
 			Str("AllowedIPs", peerIP).
 			Str("PublicKey ", resp.Message).Msgf("Generating ip address for lab %s, ip address of peer is %s ", lab.Tag, peerIP)
@@ -430,12 +431,12 @@ PersistentKeepalive = 25
 
 %s
 
-`, peerIP, labPrivKey.Message, serverPubKey.Message, lab.DhcpServer.Subnet, gwIP, endpoint, lab.DhcpServer.Subnet, installWireguard, connectWireguard, vpnInstructions)
+`, peerIP, labPrivKey.Message, serverPubKey.Message, vpnConfig.LabSubnet, gwIP, endpoint, vpnConfig.LabSubnet, installWireguard, connectWireguard, vpnInstructions)
 		labConfigFiles = append(labConfigFiles, clientConfig)
 		vpnIPs = append(vpnIPs, peerIP)
 	}
 
-	vpnIPs = append(vpnIPs, lab.DhcpServer.Subnet)
+	vpnIPs = append(vpnIPs, vpnConfig.LabSubnet)
 	return labConfigFiles, vpnIPs, nil
 }
 

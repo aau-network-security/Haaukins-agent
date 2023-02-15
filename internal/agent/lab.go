@@ -119,20 +119,23 @@ func (a *Agent) CreateVpnConfForLab(ctx context.Context, req *proto.CreateVpnCon
 		return nil, errors.New("VPN configs already generated for this lab")
 	}
 
+	labSubnet := fmt.Sprintf("%s/24", l.DhcpServer.Subnet)
+
 	vpnConfig := lab.VpnConfig{
 		Host:            a.config.Host,
 		VpnAddress:      env.EnvConfig.VPNAddress,
 		VPNEndpointPort: env.EnvConfig.VPNEndpointPort,
 		IpAddresses:     env.IpAddrs,
+		LabSubnet:       labSubnet,
 	}
 
 	labConfigsFiles, vpnIPs, err := l.CreateVPNConn(env.Wg, envTag, vpnConfig)
 
-	env.IpT.CreateRejectRule(l.DhcpServer.Subnet)
-	env.IpT.CreateStateRule(l.DhcpServer.Subnet)
-	env.IpT.CreateAcceptRule(l.DhcpServer.Subnet, strings.Join(vpnIPs, ","))
+	env.IpT.CreateRejectRule(labSubnet)
+	env.IpT.CreateStateRule(labSubnet)
+	env.IpT.CreateAcceptRule(labSubnet, strings.Join(vpnIPs, ","))
 	env.IpRules[l.Tag] = environment.IpRules{
-		Labsubnet: l.DhcpServer.Subnet,
+		Labsubnet: labSubnet,
 		VpnIps:    strings.Join(vpnIPs, ","),
 	}
 
