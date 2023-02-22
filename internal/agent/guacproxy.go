@@ -24,7 +24,7 @@ func (a *Agent) RunGuacProxy() error {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"POST", "GET", "OPTIONS", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Origin", "Cache-Control", "X-Requested-With"},
+		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Origin", "Cache-Control", "X-Requested-With", "pragma", "guacamole-token", "accept-language"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -87,8 +87,7 @@ func (a *Agent) guaclogin(c *gin.Context) {
 
 	username := c.Query("username")
 	password := c.Query("password")
-	vid := c.Query("vid")
-	if username == "" || password == "" || vid == "" {
+	if username == "" || password == "" {
 		c.JSON(http.StatusBadRequest, ProxyResponse{Message: "Bad request"})
 		return
 	}
