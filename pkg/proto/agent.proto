@@ -17,9 +17,18 @@ service Agent {
     rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc Ping (PingRequest) returns (PingResponse) {}
     rpc MonitorStream(stream PingRequest) returns (stream MonitorResponse) {}
+    rpc GetLab (GetLabRequest) returns (GetLabResponse) {}
 }
 
 message Empty{}
+
+message GetLabRequest {
+    string labTag = 1;
+}
+
+message GetLabResponse {
+    Lab lab = 1;
+}
 
 message MonitorResponse {
     string hb = 1;

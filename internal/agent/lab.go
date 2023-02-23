@@ -97,6 +97,27 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
+func (a *Agent) GetLab(ctx context.Context, req *proto.GetLabRequest) (*proto.GetLabResponse, error) {
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+	eventTag := strings.Split(l.Tag, "-")[0]
+
+	labToReturn := &proto.Lab{
+		Tag:       l.Tag,
+		EventTag:  eventTag,
+		Exercises: l.GetExercisesInfo(),
+		IsVPN:     l.IsVPN,
+		GuacCreds: &proto.GuacCreds{
+			Username: l.GuacUsername,
+			Password: l.GuacPassword,
+		},
+	}
+	return &proto.GetLabResponse{Lab: labToReturn}, nil
+}
+
 func (a *Agent) CreateVpnConfForLab(ctx context.Context, req *proto.CreateVpnConfRequest) (*proto.CreateVpnConfResponse, error) {
 	l, err := a.EnvPool.GetLabByTag(req.LabTag)
 	if err != nil {

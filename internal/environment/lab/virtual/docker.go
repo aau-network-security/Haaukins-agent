@@ -389,7 +389,7 @@ func (c *Container) Run(ctx context.Context) error {
 }
 
 func (c *Container) Stop() error {
-	if err := DefaultClient.StopContainer(c.Id, 10); err != nil {
+	if err := DefaultClient.StopContainer(c.Id, 0); err != nil {
 		return err
 	}
 
