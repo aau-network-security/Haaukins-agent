@@ -38,8 +38,8 @@ func (a *Agent) RunGuacProxy() error {
 	r.Any("/guacamole/*proxyPath", a.proxy)
 	r.GET("/guaclogin", a.guaclogin)
 
-	port := fmt.Sprintf(":%d", a.config.ProxyPort)
-	return r.Run(port)
+	listenAddress := fmt.Sprintf("%s:%d", a.config.ListeningIp, a.config.ProxyPort)
+	return r.Run(listenAddress)
 }
 
 // The guacamole proxy handler uses the subdomain of a request like "http://test.localhost:<proxyPort>/guacamole", to guide a participant to the right guacamole
