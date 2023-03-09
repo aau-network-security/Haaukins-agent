@@ -316,14 +316,14 @@ type VpnConfig struct {
 	Host            string
 	VpnAddress      string
 	VPNEndpointPort int
-	IpAddresses     []int
+	IpAddresses     [][]int
 	LabSubnet       string
+	TeamSize        int
 }
 
-func (lab *Lab) CreateVPNConn(wgClient wgproto.WireguardClient, envTag string, vpnConfig VpnConfig) ([]string, []string, error) {
+func (lab *Lab) CreateVPNConfigs(wgClient wgproto.WireguardClient, envTag string, vpnConfig VpnConfig) ([]string, []string, error) {
 	var labConfigFiles []string
-	lowBound := 240
-	upperBound := 244
+
 	ctx := context.Background()
 	var vpnIPs []string
 	vpnInstructions := getContent(vpnInfo)
@@ -345,62 +345,73 @@ func (lab *Lab) CreateVPNConn(wgClient wgproto.WireguardClient, envTag string, v
 	log.Info().Msg("Getting server public key...")
 	serverPubKey, err := wgClient.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag, PrivKeyName: envTag})
 	if err != nil {
+		log.Error().Err(err).Msg("error getting server public key")
 		return []string{}, []string{}, err
 	}
 
-	// create 4 different config file for 1 user
-	for i := lowBound; i < upperBound; i++ {
+	// VPN subnet is x.x.240.1/22
+	// So we exhaust ip's the from the lower bound first
+	i := 0
+	for {
+		if len(labConfigFiles) >= vpnConfig.TeamSize {
+			log.Debug().Msg("all configs created")
+			break
+		}
+		if len(vpnConfig.IpAddresses[i]) > 0 {
+			ipAddr := pop(&vpnConfig.IpAddresses[i])
+			log.Info().Msg("creating VPN config")
+			// generate client privatekey
+			log.Info().Msgf("Generating privatekey for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
+			_, err = wgClient.GenPrivateKey(ctx, &wgproto.PrivKeyReq{PrivateKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+			if err != nil {
+				log.Error().Err(err).Msg("error generating private key")
+				return []string{}, []string{}, err
+			}
 
-		// generate client privatekey
-		ipAddr := pop(&vpnConfig.IpAddresses)
+			// generate client public key
+			log.Info().Msgf("Generating public key for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
+			_, err = wgClient.GenPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr), PrivKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+			if err != nil {
+				log.Error().Err(err).Msg("error generating public key")
+				return []string{}, []string{}, err
+			}
 
-		log.Info().Msgf("Generating privatekey for lab %s", envTag+"_"+lab.Tag)
-		_, err = wgClient.GenPrivateKey(ctx, &wgproto.PrivKeyReq{PrivateKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
-		if err != nil {
-			return []string{}, []string{}, err
-		}
+			// get client public key
+			log.Info().Msgf("Retrieving public key for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
+			resp, err := wgClient.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+			if err != nil {
+				log.Error().Msgf("Error on GetPublicKey %v", err)
+				return []string{}, []string{}, err
+			}
+			// Adding 240 as this is the lower bound for the vpn subnet
+			peerIP := strings.Replace(vpnSubnet, "240.1/22", fmt.Sprintf("%d.%d/32", 240+i, ipAddr), 2)
+			gwIP := strings.Replace(vpnSubnet, "1/22", fmt.Sprintf("1/32"), 1)
+			log.Info().Str("NIC", envTag).
+				Str("AllowedIPs", peerIP).
+				Str("PublicKey ", resp.Message).Msgf("Generating ip address for lab %s, ip address of peer is %s ", lab.Tag, peerIP)
+			addPeerResp, err := wgClient.AddPeer(ctx, &wgproto.AddPReq{
+				Nic:        envTag,
+				AllowedIPs: peerIP,
+				PublicKey:  resp.Message,
+			})
+			if err != nil {
+				log.Error().Msgf("Error on adding peer to interface %v", err)
+				return []string{}, []string{}, err
+			}
+			log.Info().Str("Event: ", envTag).
+				Str("Lab: ", lab.Tag).Msgf("Message : %s", addPeerResp.Message)
 
-		// generate client public key
-		log.Info().Msgf("Generating public key for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
-		_, err = wgClient.GenPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr), PrivKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
-		if err != nil {
-			return []string{}, []string{}, err
-		}
-		// get client public key
-		log.Info().Msgf("Retrieving public key for lab %s", envTag+"_"+lab.Tag+"_"+strconv.Itoa(ipAddr))
-		resp, err := wgClient.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
-		if err != nil {
-			log.Error().Msgf("Error on GetPublicKey %v", err)
-			return []string{}, []string{}, err
-		}
+			labPrivKey, err := wgClient.GetPrivateKey(ctx, &wgproto.PrivKeyReq{PrivateKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
+			if err != nil {
+				log.Error().Err(err).Msg("error getting private key")
+				return []string{}, []string{}, err
+			}
+			log.Info().Msgf("Private key for lab %s is %s ", lab.Tag, labPrivKey.Message)
+			log.Info().Msgf("Client configuration is created for server %s", endpoint)
 
-		peerIP := strings.Replace(vpnSubnet, "240.1/22", fmt.Sprintf("%d.%d/32", i, ipAddr), 2)
-		gwIP := strings.Replace(vpnSubnet, "1/22", fmt.Sprintf("1/32"), 1)
-		log.Info().Str("NIC", envTag).
-			Str("AllowedIPs", peerIP).
-			Str("PublicKey ", resp.Message).Msgf("Generating ip address for lab %s, ip address of peer is %s ", lab.Tag, peerIP)
-		addPeerResp, err := wgClient.AddPeer(ctx, &wgproto.AddPReq{
-			Nic:        envTag,
-			AllowedIPs: peerIP,
-			PublicKey:  resp.Message,
-		})
-		if err != nil {
-			log.Error().Msgf("Error on adding peer to interface %v", err)
-			return []string{}, []string{}, err
-		}
-		log.Info().Str("Event: ", envTag).
-			Str("Lab: ", lab.Tag).Msgf("Message : %s", addPeerResp.Message)
-		//get client privatekey
-		log.Info().Msgf("Retrieving private key for lab %s", lab.Tag)
-		labPrivKey, err := wgClient.GetPrivateKey(ctx, &wgproto.PrivKeyReq{PrivateKeyName: envTag + "_" + lab.Tag + "_" + strconv.Itoa(ipAddr)})
-		if err != nil {
-			return []string{}, []string{}, err
-		}
-		log.Info().Msgf("Private key for lab %s is %s ", lab.Tag, labPrivKey.Message)
-		log.Info().Msgf("Client configuration is created for server %s", endpoint)
-		// creating client configuration file
-		clientConfig := fmt.Sprintf(
-			`[Interface]
+			// creating client configuration file
+			clientConfig := fmt.Sprintf(
+				`[Interface]
 Address = %s
 PrivateKey = %s
 MTU = 1420
@@ -432,8 +443,14 @@ PersistentKeepalive = 25
 %s
 
 `, peerIP, labPrivKey.Message, serverPubKey.Message, vpnConfig.LabSubnet, gwIP, endpoint, vpnConfig.LabSubnet, installWireguard, connectWireguard, vpnInstructions)
-		labConfigFiles = append(labConfigFiles, clientConfig)
-		vpnIPs = append(vpnIPs, peerIP)
+			labConfigFiles = append(labConfigFiles, clientConfig)
+			vpnIPs = append(vpnIPs, peerIP)
+		} else if i == len(vpnConfig.IpAddresses)-1 && len(vpnConfig.IpAddresses[i]) == 0 { // last set of ips is empty therefore no more ips left
+			log.Error().Msg("no ip addresses left")
+			break // Return the vpnConfigs created if any at all
+		} else { // Whenever an array of ints have been exhausted we go for the next set
+			i += 1
+		}
 	}
 
 	vpnIPs = append(vpnIPs, vpnConfig.LabSubnet)

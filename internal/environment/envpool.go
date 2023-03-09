@@ -40,20 +40,23 @@ func (ep *EnvPool) GetLabByTag(tag string) (*lab.Lab, error) {
 
 	for ke, e := range ep.Envs {
 		e.M.Lock()
-		
+
 		for kl, l := range e.Labs {
+			l.M.Lock()
 			if l.Tag == tag {
 				// To make sure that lab is by reference and not by value
+				l.M.Unlock()
 				e.M.Unlock()
 				return ep.Envs[ke].Labs[kl], nil
 			}
+			l.M.Unlock()
 		}
 		e.M.Unlock()
 	}
 	return nil, fmt.Errorf("could not find lab with tag: %s", tag)
 }
 
-func (ep *EnvPool) GetFullLabCount() (uint32) {
+func (ep *EnvPool) GetFullLabCount() uint32 {
 	ep.M.RLock()
 	defer ep.M.RUnlock()
 	var count uint32

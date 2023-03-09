@@ -35,7 +35,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 	m := &sync.RWMutex{}
 	ec.WorkerPool.AddTask(func() {
 		ctx := context.Background()
-
+		var labVpnConfigFiles = &[]string{}
 		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when starting worker")
 		// Make sure that environment is still running before creating lab
 		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
@@ -44,27 +44,52 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 		}
 
 		// Creating containers etc.
-		lab, err := ec.LabConf.NewLab(ctx, req.IsVPN, ec.Type, ec.Tag)
+		l, err := ec.LabConf.NewLab(ctx, req.IsVPN, ec.Type, ec.Tag)
 		if err != nil {
 			log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error creating new lab")
 			return
 		}
 		// Starting the created containers and frontends
-		if err := lab.Start(ctx); err != nil {
+		if err := l.Start(ctx); err != nil {
 			log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
 			return
 		}
 
-		if !lab.IsVPN {
-			if err := env.CreateGuacConn(lab); err != nil {
-				log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
+		if !l.IsVPN {
+			if err := env.CreateGuacConn(l); err != nil {
+				log.Error().Err(err).Str("labTag", l.Tag).Msg("error creating guac connection for lab")
 			}
+		} else {
+			env.M.Lock()
+
+			labSubnet := fmt.Sprintf("%s/24", l.DhcpServer.Subnet)
+
+			vpnConfig := lab.VpnConfig{
+				Host:            a.config.Host,
+				VpnAddress:      env.EnvConfig.VPNAddress,
+				VPNEndpointPort: env.EnvConfig.VPNEndpointPort,
+				IpAddresses:     env.IpAddrs,
+				LabSubnet:       labSubnet,
+				TeamSize:        env.EnvConfig.TeamSize,
+			}
+
+			labConfigsFiles, vpnIPs, _ := l.CreateVPNConfigs(env.Wg, req.EventTag, vpnConfig)
+			labVpnConfigFiles = &labConfigsFiles
+
+			env.IpT.CreateRejectRule(labSubnet)
+			env.IpT.CreateStateRule(labSubnet)
+			env.IpT.CreateAcceptRule(labSubnet, strings.Join(vpnIPs, ","))
+			env.IpRules[l.Tag] = environment.IpRules{
+				Labsubnet: labSubnet,
+				VpnIps:    strings.Join(vpnIPs, ","),
+			}
+			env.M.Unlock()
 		}
 
 		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
 		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
 			log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
-			if err := lab.Close(); err != nil {
+			if err := l.Close(); err != nil {
 				log.Error().Err(err).Msg("error closing lab")
 				return
 			}
@@ -73,20 +98,21 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 
 		// Sending lab info to daemon
 		newLab := proto.Lab{
-			Tag:       lab.Tag,
+			Tag:       l.Tag,
 			EventTag:  ec.Tag,
-			Exercises: lab.GetExercisesInfo(),
+			Exercises: l.GetExercisesInfo(),
 			IsVPN:     req.IsVPN,
 			GuacCreds: &proto.GuacCreds{
-				Username: lab.GuacUsername,
-				Password: lab.GuacPassword,
+				Username: l.GuacUsername,
+				Password: l.GuacPassword,
 			},
+			VpnConfs: *labVpnConfigFiles,
 		}
 
 		//a.newLabs = append(a.newLabs, newLab)
 		a.newLabs <- newLab
 		m.Lock()
-		env.Labs[lab.Tag] = &lab
+		env.Labs[l.Tag] = &l
 		m.Unlock()
 
 		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
@@ -136,6 +162,8 @@ func (a *Agent) CreateVpnConfForLab(ctx context.Context, req *proto.CreateVpnCon
 		log.Error().Str("envTag", envTag).Msg("error finding finding environment with tag")
 		return nil, fmt.Errorf("error finding environment with tag: %s", envTag)
 	}
+	env.M.Lock()
+	defer env.M.Unlock()
 	if _, ok := env.IpRules[l.Tag]; ok {
 		return nil, errors.New("VPN configs already generated for this lab")
 	}
@@ -148,9 +176,10 @@ func (a *Agent) CreateVpnConfForLab(ctx context.Context, req *proto.CreateVpnCon
 		VPNEndpointPort: env.EnvConfig.VPNEndpointPort,
 		IpAddresses:     env.IpAddrs,
 		LabSubnet:       labSubnet,
+		TeamSize:        env.EnvConfig.TeamSize,
 	}
 
-	labConfigsFiles, vpnIPs, err := l.CreateVPNConn(env.Wg, envTag, vpnConfig)
+	labConfigsFiles, vpnIPs, err := l.CreateVPNConfigs(env.Wg, envTag, vpnConfig)
 
 	env.IpT.CreateRejectRule(labSubnet)
 	env.IpT.CreateStateRule(labSubnet)
@@ -182,7 +211,7 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 
 	envKey := strings.Split(req.LabTag, "-")
 	log.Debug().Str("envKey", envKey[0]).Msg("env for lab")
-	
+
 	a.EnvPool.Envs[envKey[0]].M.Lock()
 	delete(a.EnvPool.Envs[envKey[0]].Labs, req.LabTag)
 	a.EnvPool.Envs[envKey[0]].M.Unlock()

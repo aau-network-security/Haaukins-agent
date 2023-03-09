@@ -100,6 +100,7 @@ func convertEnvState(envState Environment, vlib *virtual.VboxLibrary, workerPool
 		VPNAddress:      envState.EnvConfig.VPNAddress,
 		VPNEndpointPort: envState.EnvConfig.VPNEndpointPort,
 		VpnConfig:       envState.EnvConfig.VpnConfig,
+		TeamSize:        envState.EnvConfig.TeamSize,
 		WorkerPool:      workerPool,
 		LabConf: lab.LabConf{
 			Vlib:              vlib,
@@ -224,6 +225,7 @@ func makeEnvState(env *environment.Environment) Environment {
 		VPNAddress:      env.EnvConfig.VPNAddress,
 		VPNEndpointPort: env.EnvConfig.VPNEndpointPort,
 		VpnConfig:       env.EnvConfig.VpnConfig,
+		TeamSize:        env.EnvConfig.TeamSize,
 		LabConf: LabConf{
 			Frontends:         env.EnvConfig.LabConf.Frontends,
 			ExerciseConfs:     env.EnvConfig.LabConf.ExerciseConfs,

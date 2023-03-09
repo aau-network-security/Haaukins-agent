@@ -23,7 +23,7 @@ type Environment struct {
 	Guac          Guacamole
 	IpT           IPTables
 	IpRules       map[string]IpRules
-	IpAddrs       []int
+	IpAddrs       [][]int
 	Wg            wgproto.WireguardClient
 	GuacUserStore *GuacUserStore
 	Dockerhost    virtual.Host
@@ -42,6 +42,7 @@ const (
 
 type EnvConfig struct {
 	Tag             string
+	TeamSize        int
 	Type            lab.LabType
 	VPNAddress      string
 	VPNEndpointPort int
