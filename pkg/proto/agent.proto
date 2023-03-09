@@ -116,6 +116,7 @@ message Lab {
     repeated Exercise exercises = 3;
     bool isVPN = 4;
     GuacCreds guacCreds = 5;
+    repeated string vpnConfs = 6;
 }
 
 message Exercise {

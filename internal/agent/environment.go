@@ -45,6 +45,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.Tag = req.EventTag
 	envConf.Type = lab.LabType(req.EnvType)
 	envConf.WorkerPool = a.workerPool
+	envConf.TeamSize = int(req.TeamSize)
 	log.Debug().Str("envtype", envConf.Type.String()).Msg("making environment with type")
 	// Get exercise info from exercise db
 
@@ -149,10 +150,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 				// TODO use new getChallenges function to get challenges for lab to return flag etc.
 
 				newLab := proto.Lab{
-					Tag:      lab.Tag,
-					EventTag: envConf.Tag,
+					Tag:       lab.Tag,
+					EventTag:  envConf.Tag,
 					Exercises: lab.GetExercisesInfo(),
-					IsVPN:    false,
+					IsVPN:     false,
 					GuacCreds: &proto.GuacCreds{
 						Username: lab.GuacUsername,
 						Password: lab.GuacPassword,

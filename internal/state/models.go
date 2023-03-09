@@ -19,7 +19,7 @@ type Environment struct {
 	Guac      Guacamole
 	IpT       IPTables
 	IpRules   map[string]env.IpRules
-	IpAddrs   []int
+	IpAddrs   [][]int
 	Labs      map[string]Lab
 }
 
@@ -31,6 +31,7 @@ type EnvConfig struct {
 	VpnConfig       wg.WireGuardConfig
 	LabConf         LabConf
 	Status          env.Status
+	TeamSize        int
 }
 
 type Lab struct {

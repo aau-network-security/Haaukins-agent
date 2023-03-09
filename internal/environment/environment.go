@@ -44,12 +44,15 @@ func (ec *EnvConfig) NewEnv(ctx context.Context) (*Environment, error) {
 
 	dockerHost := virtual.NewHost()
 
-	var eventVPNIPs []int
+	var eventVPNIPs [][]int
 
 	// TODO Make dynamic based on amount of users on a team
-	ipAddrs := makeRange(2, 254)
+	// Since subnet is x.x.240.1/22
+	// We create 4 arrays of int
+	// This means we cover 240.2-254, 241.2-254, 242.2-254 and 243.2-254
 	for i := 0; i < 4; i++ {
-		eventVPNIPs = append(eventVPNIPs, ipAddrs...)
+		ipAddrs := makeRange(2, 254)
+		eventVPNIPs = append(eventVPNIPs, ipAddrs)
 	}
 
 	env := &Environment{
