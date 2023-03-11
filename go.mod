@@ -3,7 +3,7 @@ module github.com/aau-network-security/haaukins-agent
 go 1.18
 
 require (
-	github.com/aau-network-security/gwireguard v1.0.3
+	github.com/aau-network-security/gwireguard v1.0.5-0.20230311152758-128bc2b44342
 	github.com/aau-network-security/haaukins-exercises v1.2.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsouza/go-dockerclient v1.8.3
@@ -19,7 +19,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2
 	google.golang.org/grpc v1.43.0
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.29.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 

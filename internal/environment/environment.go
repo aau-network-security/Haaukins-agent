@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -105,6 +107,56 @@ func (env *Environment) Start(ctx context.Context) error {
 	}
 
 	env.EnvConfig.Status = StatusRunning
+	return nil
+}
+
+func (env *Environment) RemoveVpnLabPeers(ctx context.Context, labTag string) error {
+	env.M.Lock()
+	defer env.M.Unlock()
+
+	log.Debug().Msgf("removing ip table rules for lab: %s", labTag)
+	labIpRules, ok := env.IpRules[labTag]
+	if !ok {
+		log.Error().Msg("error removing VPN peers for lab")
+	}
+	env.IpT.RemoveRejectRule(labIpRules.Labsubnet)
+	env.IpT.RemoveStateRule(labIpRules.Labsubnet)
+	env.IpT.RemoveAcceptRule(labIpRules.Labsubnet, labIpRules.VpnIps)
+	delete(env.IpRules, labTag)
+
+	log.Debug().Msgf("removing wg peers for lab: %s", labTag)
+	vpnIps := strings.Split(labIpRules.VpnIps, ",")
+	// Subnet is the last ip and we only want to remove the peers
+	for i := 0; i < len(vpnIps)-1; i++ {
+		ipBytes := strings.Split(vpnIps[i], ".")
+		lastByteStr := strings.Split(ipBytes[3], "/")[0]
+		log.Debug().Msgf("ipBytes: %v", ipBytes)
+		pubKeyResp, err := env.Wg.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: env.EnvConfig.Tag + "_" + labTag + "_" + lastByteStr})
+		if err != nil {
+			log.Error().Err(err).Msgf("error getting public key for lab: %s", labTag)
+			return err
+		}
+		wgReq := wgproto.DelPReq{
+			Nic:           env.EnvConfig.Tag,
+			PeerPublicKey: pubKeyResp.Message,
+		}
+		resp, err := env.Wg.DelPeer(ctx, &wgReq)
+		if err != nil {
+			log.Error().Err(err).Msgf("error deleting peer in wireguard for lab: %s", labTag)
+			return err
+		}
+		if resp != nil {
+			log.Debug().Str("response", resp.Message).Msgf("resp from wg when deleting peer for lab: %s", labTag)
+		}
+		// Index byte is determined by the second last byte of the ip - 240
+		indexByte, _ := strconv.Atoi(ipBytes[2])
+		lastByte, _ := strconv.Atoi(lastByteStr)
+		env.IpAddrs[indexByte-240] = append(env.IpAddrs[indexByte-240], lastByte)
+	}
+	if err := removeVPNConfigs(env.EnvConfig.VpnConfig.Dir + "/" + env.EnvConfig.Tag + "_" + labTag + "*"); err != nil {
+		log.Error().Err(err).Msgf("Error happened on deleting VPN configuration files for lab %s", labTag)
+	}
+
 	return nil
 }
 

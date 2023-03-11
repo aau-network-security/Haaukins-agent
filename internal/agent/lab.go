@@ -210,11 +210,17 @@ func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*prot
 	})
 
 	envKey := strings.Split(req.LabTag, "-")
+	env, _ := a.EnvPool.GetEnv(envKey[0])
+
 	log.Debug().Str("envKey", envKey[0]).Msg("env for lab")
 
 	a.EnvPool.Envs[envKey[0]].M.Lock()
 	delete(a.EnvPool.Envs[envKey[0]].Labs, req.LabTag)
 	a.EnvPool.Envs[envKey[0]].M.Unlock()
+
+	if l.IsVPN {
+		env.RemoveVpnLabPeers(ctx, req.LabTag)
+	}
 
 	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
