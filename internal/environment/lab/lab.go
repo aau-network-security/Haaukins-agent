@@ -452,7 +452,7 @@ PersistentKeepalive = 25
 			i += 1
 		}
 	}
-
+	
 	vpnIPs = append(vpnIPs, vpnConfig.LabSubnet)
 	return labConfigFiles, vpnIPs, nil
 }

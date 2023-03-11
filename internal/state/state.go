@@ -209,6 +209,7 @@ func convertLabState(l Lab, vlib *virtual.VboxLibrary) (*lab.Lab, error) {
 	resumedLab.IsVPN = l.IsVPN
 	resumedLab.GuacUsername = l.GuacUsername
 	resumedLab.GuacPassword = l.GuacPassword
+	resumedLab.VpnConfs = l.VpnConfs
 
 	return resumedLab, nil
 }
@@ -304,6 +305,7 @@ func makeLabState(l *lab.Lab) Lab {
 	labState.IsVPN = l.IsVPN
 	labState.GuacUsername = l.GuacUsername
 	labState.GuacPassword = l.GuacPassword
+	labState.VpnConfs = l.VpnConfs
 
 	return labState
 }

@@ -35,7 +35,6 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 	m := &sync.RWMutex{}
 	ec.WorkerPool.AddTask(func() {
 		ctx := context.Background()
-		var labVpnConfigFiles = &[]string{}
 		log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when starting worker")
 		// Make sure that environment is still running before creating lab
 		if ec.Status == environment.StatusClosing || ec.Status == environment.StatusClosed {
@@ -74,7 +73,6 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 			}
 
 			labConfigsFiles, vpnIPs, _ := l.CreateVPNConfigs(env.Wg, req.EventTag, vpnConfig)
-			labVpnConfigFiles = &labConfigsFiles
 
 			env.IpT.CreateRejectRule(labSubnet)
 			env.IpT.CreateStateRule(labSubnet)
@@ -83,6 +81,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 				Labsubnet: labSubnet,
 				VpnIps:    strings.Join(vpnIPs, ","),
 			}
+			l.VpnConfs = labConfigsFiles
 			env.M.Unlock()
 		}
 
@@ -106,7 +105,7 @@ func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest
 				Username: l.GuacUsername,
 				Password: l.GuacPassword,
 			},
-			VpnConfs: *labVpnConfigFiles,
+			VpnConfs: l.VpnConfs,
 		}
 
 		//a.newLabs = append(a.newLabs, newLab)
@@ -140,6 +139,7 @@ func (a *Agent) GetLab(ctx context.Context, req *proto.GetLabRequest) (*proto.Ge
 			Username: l.GuacUsername,
 			Password: l.GuacPassword,
 		},
+		VpnConfs: l.VpnConfs,
 	}
 	return &proto.GetLabResponse{Lab: labToReturn}, nil
 }
