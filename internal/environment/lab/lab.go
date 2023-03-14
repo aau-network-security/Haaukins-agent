@@ -302,7 +302,7 @@ func generateTag(eventTag string) string {
 	return fmt.Sprintf("%s-%s", eventTag, id)
 }
 
-func getDNSRecords(records []*DNSRecord) []string {
+func GetDNSRecords(records []*DNSRecord) []string {
 	var hosts []string
 	for _, r := range records {
 		for ip, arecord := range r.Record {

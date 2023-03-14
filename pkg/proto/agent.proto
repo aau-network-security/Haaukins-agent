@@ -18,6 +18,7 @@ service Agent {
     rpc Ping (PingRequest) returns (PingResponse) {}
     rpc MonitorStream(stream PingRequest) returns (stream MonitorResponse) {}
     rpc GetLab (GetLabRequest) returns (GetLabResponse) {}
+    rpc GetHostsInLab (GetHostsRequest) returns (GetHostsResponse) {}
 }
 
 message Empty{}
@@ -28,6 +29,14 @@ message GetLabRequest {
 
 message GetLabResponse {
     Lab lab = 1;
+}
+
+message GetHostsRequest {
+    string labTag = 1;
+}
+
+message GetHostsResponse {
+    repeated string hosts = 1;
 }
 
 message MonitorResponse {

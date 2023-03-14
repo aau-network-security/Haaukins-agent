@@ -193,6 +193,18 @@ func (a *Agent) CreateVpnConfForLab(ctx context.Context, req *proto.CreateVpnCon
 	return &proto.CreateVpnConfResponse{Configs: labConfigsFiles}, nil
 }
 
+func (a *Agent) GetHostsInLab(ctx context.Context, req *proto.GetHostsRequest) (*proto.GetHostsResponse, error) {
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	hosts := lab.GetDNSRecords(l.DnsRecords)
+
+	return &proto.GetHostsResponse{Hosts: hosts}, nil
+}
+
 // Shuts down and removes all frontends and containers related to specific lab. Then removes it from the environment's lab map.
 func (a *Agent) CloseLab(ctx context.Context, req *proto.CloseLabRequest) (*proto.StatusResponse, error) {
 	l, err := a.EnvPool.GetLabByTag(req.LabTag)
