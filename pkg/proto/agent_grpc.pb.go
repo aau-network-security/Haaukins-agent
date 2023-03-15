@@ -37,6 +37,7 @@ type AgentClient interface {
 	MonitorStream(ctx context.Context, opts ...grpc.CallOption) (Agent_MonitorStreamClient, error)
 	GetLab(ctx context.Context, in *GetLabRequest, opts ...grpc.CallOption) (*GetLabResponse, error)
 	GetHostsInLab(ctx context.Context, in *GetHostsRequest, opts ...grpc.CallOption) (*GetHostsResponse, error)
+	ResetVmInLab(ctx context.Context, in *VmRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 }
 
 type agentClient struct {
@@ -204,6 +205,15 @@ func (c *agentClient) GetHostsInLab(ctx context.Context, in *GetHostsRequest, op
 	return out, nil
 }
 
+func (c *agentClient) ResetVmInLab(ctx context.Context, in *VmRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/ResetVmInLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServer is the server API for Agent service.
 // All implementations must embed UnimplementedAgentServer
 // for forward compatibility
@@ -223,6 +233,7 @@ type AgentServer interface {
 	MonitorStream(Agent_MonitorStreamServer) error
 	GetLab(context.Context, *GetLabRequest) (*GetLabResponse, error)
 	GetHostsInLab(context.Context, *GetHostsRequest) (*GetHostsResponse, error)
+	ResetVmInLab(context.Context, *VmRequest) (*StatusResponse, error)
 	mustEmbedUnimplementedAgentServer()
 }
 
@@ -274,6 +285,9 @@ func (UnimplementedAgentServer) GetLab(context.Context, *GetLabRequest) (*GetLab
 }
 func (UnimplementedAgentServer) GetHostsInLab(context.Context, *GetHostsRequest) (*GetHostsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetHostsInLab not implemented")
+}
+func (UnimplementedAgentServer) ResetVmInLab(context.Context, *VmRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetVmInLab not implemented")
 }
 func (UnimplementedAgentServer) mustEmbedUnimplementedAgentServer() {}
 
@@ -566,6 +580,24 @@ func _Agent_GetHostsInLab_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Agent_ResetVmInLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VmRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ResetVmInLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/ResetVmInLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ResetVmInLab(ctx, req.(*VmRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Agent_ServiceDesc is the grpc.ServiceDesc for Agent service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -628,6 +660,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetHostsInLab",
 			Handler:    _Agent_GetHostsInLab_Handler,
+		},
+		{
+			MethodName: "ResetVmInLab",
+			Handler:    _Agent_ResetVmInLab_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

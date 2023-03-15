@@ -609,10 +609,10 @@ func CreateUserFolder(teamId string, eventTag string) error {
 	return nil
 }
 
-func CreateFolderLink(vm string, eventTag string, teamId string) error {
+func CreateFolderLink(vm string, envTag string, guacUsername string) error {
 	log.Debug().Msgf("Trying to link shared folder to vm: %s", vm)
 	//todo Figure out a way to add the new folder and general setup of filetransfer folder and how to manage its content.
-	_, err := VBoxCmdContext(context.Background(), "sharedfolder", "add", vm, "--name", "filetransfer", "-hostpath", FileTransferRoot+"/"+eventTag+"/"+teamId, "-transient", "-automount")
+	_, err := VBoxCmdContext(context.Background(), "sharedfolder", "add", vm, "--name", "filetransfer", "-hostpath", FileTransferRoot+"/"+envTag+"/"+guacUsername, "-transient", "-automount")
 	if err != nil {
 		log.Warn().Msgf("Error creating shared folder link: %s", err)
 		return err

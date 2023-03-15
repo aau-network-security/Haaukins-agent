@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -203,6 +204,62 @@ func (a *Agent) GetHostsInLab(ctx context.Context, req *proto.GetHostsRequest) (
 	hosts := lab.GetDNSRecords(l.DnsRecords)
 
 	return &proto.GetHostsResponse{Hosts: hosts}, nil
+}
+
+func (a *Agent) ResetVmInLab(ctx context.Context, req *proto.VmRequest) (*proto.StatusResponse, error) {
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	envTag := strings.Split(l.Tag, "-")[0]
+	env, err := a.EnvPool.GetEnv(envTag)
+	if err != nil {
+		log.Error().Str("envTag", envTag).Msg("error finding finding environment with tag")
+		return nil, fmt.Errorf("error finding environment with tag: %s", envTag)
+	}
+
+	// In case teamsize is larger than one
+	// A connectionIdentifier is required to determine which vm to reset
+	if env.EnvConfig.TeamSize > 1 {
+		portStr, err := env.Guac.GetPortFromConnectionIdentifier(req.ConnectionIdentifier)
+		if err != nil {
+			log.Error().Err(err).Msg("error getting port from connection identifier")
+			return nil, err
+		}
+	
+		portInt, _ := strconv.Atoi(portStr)
+	
+		log.Debug().Str("port", portStr).Msg("response from GetPortFromConnectionIdentifier")
+		
+		// Checking the lab for frontends with the requested port
+		// This is to only allow a team to reset a vm within their own lab
+		// since the connectionIdentifier is untrusted input
+		
+		l.M.Lock()
+		defer l.M.Unlock()
+		if frontend, ok := l.Frontends[uint(portInt)]; ok {
+			log.Debug().Msgf("frontend from lab frontends: %v", frontend)
+			if err := l.ResetVm(ctx, uint(portInt), envTag); err != nil {
+				log.Error().Err(err).Msg("error resetting vm")
+				return nil, err
+			}
+			return &proto.StatusResponse{Message: "OK"}, nil
+		} 
+
+		return nil, errors.New("frontend with that connection identifier not found in lab")
+	} else {
+		l.M.Lock()
+		defer l.M.Unlock()
+		for port := range l.Frontends {
+			if err := l.ResetVm(ctx, port, envTag); err != nil {
+				log.Error().Err(err).Msg("error resetting vm")
+				return nil, err
+			}
+		}
+		return &proto.StatusResponse{Message: "OK"}, nil
+	}	
 }
 
 // Shuts down and removes all frontends and containers related to specific lab. Then removes it from the environment's lab map.

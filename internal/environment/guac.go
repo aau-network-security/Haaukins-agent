@@ -500,6 +500,29 @@ func (guac *Guacamole) changeAdminPass(newPass string) error {
 	return nil
 }
 
+func (guac *Guacamole) GetPortFromConnectionIdentifier(connectionIdentifier string) (string, error) {
+	action := func(t string) (*http.Response, error) {
+		endpoint := guac.baseUrl() + "/guacamole/api/session/data/mysql/connections/" + connectionIdentifier + "/parameters?token=" + t
+		log.Debug().Str("endpoint", endpoint).Msg("endpoint")
+		req, err := http.NewRequest("GET", endpoint, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		return guac.Client.Do(req)
+	}
+
+	var resp struct {
+		Port string `json:"port"`
+	}
+	if err := guac.authAction("change admin password", action, &resp); err != nil {
+		return "", err
+	}
+
+	return resp.Port, nil
+}
+
 func (guac *Guacamole) baseUrl() string {
 	return fmt.Sprintf("http://127.0.0.1:%d", guac.Port)
 }
@@ -588,6 +611,7 @@ func (guac *Guacamole) authAction(action string, a func(string) (*http.Response,
 		return err
 	}
 
+	log.Debug().Msgf("i in action: %v", i)
 	if i != nil {
 		if err := json.Unmarshal(content, i); err != nil {
 			return err

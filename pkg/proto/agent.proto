@@ -19,9 +19,15 @@ service Agent {
     rpc MonitorStream(stream PingRequest) returns (stream MonitorResponse) {}
     rpc GetLab (GetLabRequest) returns (GetLabResponse) {}
     rpc GetHostsInLab (GetHostsRequest) returns (GetHostsResponse) {}
+    rpc ResetVmInLab (VmRequest) returns (StatusResponse) {}
 }
 
 message Empty{}
+
+message VmRequest {
+    string labTag = 1;
+    string connectionIdentifier = 2;
+}
 
 message GetLabRequest {
     string labTag = 1;

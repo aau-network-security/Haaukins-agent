@@ -2,6 +2,7 @@ package lab
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -274,6 +275,32 @@ func (l *Lab) addFrontend(ctx context.Context, conf virtual.InstanceConfig, rdpP
 	return vm, nil
 }
 
+func (l *Lab) ResetVm(ctx context.Context, port uint, envTag string) error {
+	frontendConf, ok := l.Frontends[port]
+	if !ok {
+		return errors.New("no vm running in lab on that port")
+	}
+	if err := frontendConf.Vm.Close(); err != nil {
+		return err
+	}
+
+	vm, err := l.addFrontend(ctx, frontendConf.Conf, port)
+	if err != nil {
+		return err
+	}
+
+	if err := vm.Start(ctx); err != nil {
+		return err
+	}
+
+	err = virtual.CreateFolderLink(vm.Info().Id, envTag, l.GuacUsername)
+	if err != nil {
+		log.Logger.Debug().Msgf("Error creating shared folder link after vm reset: %s", err)
+	}
+
+	return nil
+}
+
 // Get a list of ports for the VMs running in the lab
 func (l *Lab) RdpConnPorts() []uint {
 	var ports []uint
@@ -452,7 +479,7 @@ PersistentKeepalive = 25
 			i += 1
 		}
 	}
-	
+
 	vpnIPs = append(vpnIPs, vpnConfig.LabSubnet)
 	return labConfigFiles, vpnIPs, nil
 }
