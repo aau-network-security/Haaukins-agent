@@ -6,22 +6,34 @@ import (
 
 type Config struct {
 	Host               string                           `yaml:"host"`
-	Port               uint                             `yaml:"port"`
+	GrpcPort           uint                             `yaml:"grpcPort"`
+	ProxyPort          uint                             `yaml:"proxyPort"`
+	ListeningIp        string                           `yaml:"listening-ip,omitempty"`
 	AuthKey            string                           `yaml:"auth-key"`
 	SignKey            string                           `yaml:"sign-key"`
-	RedisDataPath      string                           `yaml:"redis-data-path"`
+	MaxWorkers         int                              `yaml:"max-workers"`
 	FileTransferRoot   string                           `yaml:"file-transfer-root"`
 	OvaDir             string                           `yaml:"ova-dir"`
+	StatePath          string                           `yaml:"state-path"`
+	ExerciseService    ServiceConfig                    `yaml:"exercise-service"`
 	VPNService         VPNconf                          `yaml:"vpn-service"`
 	DockerRepositories []dockerclient.AuthConfiguration `yaml:"docker-repositories"`
 	GuacSSL            bool                             `yaml:"guac-ssl"`
+	JwtSecret          string                           `yaml:"jwtSecret"`
 }
 
 type VPNconf struct {
 	Endpoint   string `yaml:"endpoint"`
-	Port       string `yaml:"port"`
+	Port       uint64 `yaml:"port"`
 	AuthKey    string `yaml:"auth-key"`
 	SignKey    string `yaml:"sign-key"`
 	WgConfDir  string `yaml:"wg-conf-dir"`
+	TLSEnabled bool   `yaml:"tls-enabled"`
+}
+
+type ServiceConfig struct {
+	Grpc       string `yaml:"grpc"`
+	AuthKey    string `yaml:"auth-key"`
+	SignKey    string `yaml:"sign-key"`
 	TLSEnabled bool   `yaml:"tls-enabled"`
 }

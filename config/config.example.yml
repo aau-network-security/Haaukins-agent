@@ -1,13 +1,23 @@
 host: localhost
-port: 8081
+listening-ip: "127.0.0.1" #Leave out if you want to listen on 0.0.0.0
+grpcPort: 8081
+proxyPort: 8082
+
+
 auth-key: test-auth-key
 sign-key: test-sign-key
-
+max-workers: 5
 guac-ssl: false
-
-redis-data-path: /path/to/desired/redis/data
+jwtSecret: test
 file-transfer-root: /path/to/desired/filetransfer/root
 ova-dir: /path/to/desired/ova/directory
+state-path: /path/to/desired/state/directory
+
+exercise-service:
+  grpc: "localhost:port"
+  auth-key: dev-auth-key
+  sign-key: dev-sign-key
+  tls-enabled: false
 
 vpn-service:
   endpoint: vpn.localhost
@@ -16,3 +26,8 @@ vpn-service:
   sign-key: dev-sign-key
   wg-conf-dir: /etc/wireguard
   tls-enabled: false
+
+docker-repositories:
+- username: username
+  password: password
+  serveraddress: registry.gitlab.com

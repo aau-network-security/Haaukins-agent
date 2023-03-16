@@ -2,20 +2,158 @@ syntax = "proto3";
 package agent;
 option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 
+//TODO add CreateLabsForEnv function
 service Agent {
-    rpc CreateLabs(CreateLabsRequest) returns (CreateLabsResponse) {}
-    rpc LabStream(Empty) returns (stream Lab)
+    rpc Init(InitRequest) returns (StatusResponse) {}
+    rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
+    rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
+    rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
+    rpc CreateVpnConfForLab(CreateVpnConfRequest) returns (CreateVpnConfResponse) {}
+    rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
+    rpc AddExercisesToEnv (ExerciseRequest) returns (StatusResponse) {}
+    rpc AddExercisesToLab(ExerciseRequest) returns (StatusResponse) {}
+    rpc ResetExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
+    rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
+    rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
+    rpc Ping (PingRequest) returns (PingResponse) {}
+    rpc MonitorStream(stream PingRequest) returns (stream MonitorResponse) {}
+    rpc GetLab (GetLabRequest) returns (GetLabResponse) {}
+    rpc GetHostsInLab (GetHostsRequest) returns (GetHostsResponse) {}
+    rpc ResetVmInLab (VmRequest) returns (StatusResponse) {}
 }
 
 message Empty{}
 
-message CreateLabsRequest {
+message VmRequest {
+    string labTag = 1;
+    string connectionIdentifier = 2;
+}
+
+message GetLabRequest {
+    string labTag = 1;
+}
+
+message GetLabResponse {
+    Lab lab = 1;
+}
+
+message GetHostsRequest {
+    string labTag = 1;
+}
+
+message GetHostsResponse {
+    repeated string hosts = 1;
+}
+
+message MonitorResponse {
+    string hb = 1;
+    repeated Lab newLabs = 2;
+    Resources resources = 3;
+    uint32 queuedTasks = 4;
+}
+
+message Resources {
+    uint64 memAvailable = 1;
+    double cpu = 2;
+    double memPercentUsed = 3;
+    uint32 labCount = 4;
+    uint32 vmCount = 5;
+    uint32 containerCount = 6;
+    uint64 memInstalled = 7;
+}
+
+message InitRequest {
+    string url = 1;
+    string authKey = 2;
+    string signKey = 3;
+    bool tlsEnabled = 4;
+}
+
+message PingRequest {
+    string ping = 1;
+}
+
+message PingResponse {
+    string pong = 1;
+    uint64 memInstalled = 2;
+}
+
+message CreatEnvRequest {
+    string eventTag = 1;
+    int32 envType = 2;
+    VmConfig vm = 3;
+    int32 initialLabs = 4;
+    repeated string exercises = 5;
+    int32 teamSize = 6;
+}
+
+message CloseEnvRequest {
+    string eventTag = 1;
+}
+
+message CreateLabRequest{
+    string eventTag = 1;
+    bool isVPN = 2;
+}
+
+message CreateVpnConfRequest {
+    string labTag = 1;
+}
+
+message CreateVpnConfResponse {
+    repeated string configs = 1;
+}
+
+message CloseLabRequest {
+    string labTag = 1;
+}
+
+message ExerciseRequest {
+    string labTag = 1;
+    string envTag = 2;
+    repeated string exercises = 3;
+    string exercise = 4;
+}
+
+message VmConfig {
+    string image = 1;
+    uint32 memoryMB = 2;
+    double cpu = 3;
+}
+
+message StatusResponse {
     string message = 1;
 }
 
-message CreateLabsResponse {
-    string eventTag = 1;
-    string vm = 2;
-    repeated string exercises = 3;
-    string error = 4;
+message Lab {
+    string tag = 1;
+    string eventTag = 2;
+    repeated Exercise exercises = 3;
+    bool isVPN = 4;
+    GuacCreds guacCreds = 5;
+    repeated string vpnConfs = 6;
+}
+
+message Exercise {
+    string tag = 1;
+    repeated ChildExercise childExercises = 2;
+    repeated Machine machines = 3;
+}
+
+message ChildExercise {
+    string tag = 1;
+    string flag = 2;
+}
+
+message Machine {
+    string id = 1;
+    string status = 2;
+    string image = 3;
+    repeated string errors = 4;
+    string type = 5;
+}
+
+message GuacCreds {
+    string username = 1;
+    string password = 2;
 }

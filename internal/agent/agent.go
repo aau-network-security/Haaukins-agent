@@ -3,40 +3,46 @@ package agent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
+	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"google.golang.org/grpc"
 
-	"github.com/aau-network-security/haaukins-agent/internal/cache"
-	"github.com/aau-network-security/haaukins-agent/internal/virtual/docker"
+	env "github.com/aau-network-security/haaukins-agent/internal/environment"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
+	"github.com/aau-network-security/haaukins-agent/internal/worker"
+	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
 	eproto "github.com/aau-network-security/haaukins-exercises/proto"
-	"github.com/aau-network-security/haaukins/virtual"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
 
-type Agent struct {
-	redis cache.RedisCache
-	State *State
-	auth  Authenticator
-	pb.UnimplementedAgentServer
-}
+var configPath string
 
-type State struct {
-	m         sync.RWMutex
-	Eventpool *eventPool `json:"eventpool,omitempty"`
-	exClient  eproto.ExerciseStoreClient
+type Agent struct {
+	initialized bool
+	config      *Config
+	State       *state.State
+	auth        Authenticator
+	vlib        *virtual.VboxLibrary
+	pb.UnimplementedAgentServer
+	workerPool worker.WorkerPool
+	newLabs    chan pb.Lab
+	ExClient   eproto.ExerciseStoreClient
+	EnvPool    *env.EnvPool `json:"envpool,omitempty"`
 }
 
 const DEFAULT_SIGN = "dev-sign-key"
 const DEFAULT_AUTH = "dev-auth-key"
 
+// TODO check vpn service conf
 func NewConfigFromFile(path string) (*Config, error) {
+	configPath = path
 	f, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -53,9 +59,9 @@ func NewConfigFromFile(path string) (*Config, error) {
 		c.Host = "localhost"
 	}
 
-	if c.Port == 0 {
-		log.Debug().Msg("port not provided in the configuration file")
-		c.Port = 50095
+	if c.GrpcPort == 0 {
+		log.Debug().Int("port", 50095).Msg("port not provided in the configuration file using default")
+		c.GrpcPort = 50095
 	}
 
 	if c.SignKey == "" {
@@ -68,93 +74,100 @@ func NewConfigFromFile(path string) (*Config, error) {
 		c.AuthKey = DEFAULT_AUTH
 	}
 
+	if c.MaxWorkers == 0 {
+		c.MaxWorkers = 5
+	}
+
+	// In case paths has not been set, use working directory
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get current working directory for redis")
+		log.Fatal().Err(err).Msg("failed to get current working directory")
 	}
-	if c.RedisDataPath == "" {
-		log.Debug().Msg("redisDataPath not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "data")
+	if c.StatePath == "" {
+		log.Fatal().Msg("statepath not provided in the configuration file\n Please provide a path for the state file to be saved")
 	}
 
 	if c.FileTransferRoot == "" {
 		log.Debug().Msg("filetransfer root not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "filetransfer")
+		c.FileTransferRoot = filepath.Join(pwd, "filetransfer")
 	}
 
 	if c.OvaDir == "" {
 		log.Debug().Msg("ova dir not provided in the configuration file")
-		c.RedisDataPath = filepath.Join(pwd, "vms")
+		c.OvaDir = filepath.Join(pwd, "vms")
 	}
 
 	for _, repo := range c.DockerRepositories {
-		docker.Registries[repo.ServerAddress] = repo
+		virtual.Registries[repo.ServerAddress] = repo
 	}
 
 	return &c, nil
 }
 
 func New(conf *Config) (*Agent, error) {
-	ctx := context.Background()
-	// Setting up the redis container
-	if _, err := os.Stat(conf.RedisDataPath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(conf.RedisDataPath, os.ModePerm)
+	// Creating filetransfer root if not exists
+	err := virtual.CreateFileTransferRoot(conf.FileTransferRoot)
+	if err != nil {
+		log.Fatal().Msgf("Error while creating file transfer root: %s", err)
+	}
+
+	// Setting up the state path
+	if _, err := os.Stat(conf.StatePath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(conf.StatePath, os.ModePerm)
 		if err != nil {
 			log.Error().Err(err).Msg("Error creating dir")
 		}
 	}
 
-	// Check if redis is running
-	container, err := docker.GetRedisContainer(conf.RedisDataPath)
-	if err != nil {
-		log.Error().Err(err).Msg("error getting container state")
-		return nil, err
-	}
-
-	// Container exists checking the state to start the container if it has been stopped
-	if container != nil {
-		log.Debug().Msg("Found already existing redis container")
-		log.Debug().Msgf("Container info: %v", container.Info())
-		if container.Info().State == virtual.Stopped || container.Info().State == virtual.Suspended {
-			log.Debug().Msg("Container not running, restarting the container...")
-			if err := container.Start(ctx); err != nil {
-				log.Fatal().Err(err).Msg("Failed to start existing redis container")
-			}
-			// Waiting for container to start
-			time.Sleep(5)
-		} else {
-			log.Debug().Msg("Container already running, continueing...")
-		}
+	var initialized = true
+	var exClient eproto.ExerciseStoreClient
+	// Check if exercise service has been configured by daemon
+	if conf.ExerciseService.Grpc == "" {
+		log.Debug().Msg("exercise service not yet configured, waiting for daemon to initiliaze...")
+		initialized = false
+		exClient = nil
 	} else {
-		// Didn't detect the redis container, starting a new one...
-		log.Info().Msg("No redis container detected, creating a new one")
-		container = docker.NewContainer(docker.ContainerConfig{
-			Image:     "redis:7.0.4",
-			Name:      "redis_cache",
-			UseBridge: true,
-			Mounts: []string{
-				conf.RedisDataPath + ":/data",
-			},
-			PortBindings: map[string]string{
-				"6379": "127.0.0.1:6379",
-			},
-		})
-		if err := container.Run(ctx); err != nil {
-			log.Fatal().Err(err).Msg("Error running new redis container")
+		exClient, err = NewExerciseClientConn(conf.ExerciseService)
+		if err != nil {
+			return nil, fmt.Errorf("error connecting to exercise service: %s", err)
 		}
-		// Waiting for container to start
-		time.Sleep(5)
 	}
 
-	//log.Debug().Int("State", int(redisContainer.Info().State))
-	d := &Agent{
-		redis: cache.RedisCache{
-			Host: "127.0.0.1:6379",
-			DB:   0,
-		},
-		auth: NewAuthenticator(conf.SignKey, conf.AuthKey),
+	// Creating and starting a workerPool for lab creation
+	// This is to ensure that resources are not spent without having them
+	// Workeramount can be configured from the config
+	workerPool := worker.NewWorkerPool(conf.MaxWorkers)
+	workerPool.Run()
+
+	vlib := virtual.NewLibrary(conf.OvaDir)
+
+	envPool, err := state.ResumeState(vlib, workerPool, conf.StatePath)
+	if err != nil {
+		log.Error().Err(err).Msg("error resuming state")
+		envPool = &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
+		}
 	}
-	return d, nil
+	if envPool == nil {
+		envPool = &env.EnvPool{
+			M:    &sync.RWMutex{},
+			Envs: make(map[string]*env.Environment),
+		}
+	}
+	// Creating agent struct
+	a := &Agent{
+		initialized: initialized,
+		config:      conf,
+		workerPool:  workerPool,
+		vlib:        vlib,
+		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs:     make(chan pb.Lab, 1000),
+		ExClient:    exClient,
+		EnvPool:     envPool,
+		State:       &state.State{},
+	}
+	return a, nil
 }
 
 func (d *Agent) NewGRPCServer(opts ...grpc.ServerOption) *grpc.Server {
@@ -178,4 +191,52 @@ func (d *Agent) NewGRPCServer(opts ...grpc.ServerOption) *grpc.Server {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	}, opts...)
 	return grpc.NewServer(opts...)
+}
+
+// Connect to exdb based on what creds sent by daemon, and write to config
+func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.StatusResponse, error) {
+	// Creating service config based on request from daemon
+	var exConf = ServiceConfig{
+		Grpc:       req.Url,
+		AuthKey:    req.AuthKey,
+		SignKey:    req.SignKey,
+		TLSEnabled: req.TlsEnabled,
+	}
+	// Creating new exercise service connection from config
+	log.Debug().Msgf("request: %v", req)
+	exClient, err := NewExerciseClientConn(exConf)
+	if err != nil {
+		log.Error().Err(err).Msg("error connecting to exercise service")
+		return nil, fmt.Errorf("error connecting to exercise service: %s", err)
+	}
+
+	// Saving the config in the agent config
+	a.config.ExerciseService = exConf
+
+	// Updating the config
+	data, err := yaml.Marshal(a.config)
+	if err != nil {
+		log.Error().Err(err).Msg("error marshalling yaml")
+		return nil, fmt.Errorf("error marshalling yaml: %s", err)
+	}
+
+	// Truncates existing file to overwrite with new data
+	f, err := os.Create(configPath)
+	if err != nil {
+		log.Error().Err(err).Msg("error creating or truncating config file")
+		return nil, fmt.Errorf("error creating or truncating config file: %s", err)
+	}
+
+	if err := f.Chmod(0600); err != nil {
+		log.Error().Err(err).Msg("error changing file perms")
+		return nil, fmt.Errorf("error changing file perms: %s", err)
+	}
+
+	if _, err := f.Write(data); err != nil {
+		log.Error().Err(err).Msg("error writing config to file")
+		return nil, fmt.Errorf("error writing config to file: %s", err)
+	}
+	a.initialized = true
+	a.ExClient = exClient
+	return &proto.StatusResponse{Message: "OK"}, nil
 }

@@ -58,16 +58,17 @@ func (*Empty) Descriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{0}
 }
 
-type TestCallRequest struct {
+type VmRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	LabTag               string `protobuf:"bytes,1,opt,name=labTag,proto3" json:"labTag,omitempty"`
+	ConnectionIdentifier string `protobuf:"bytes,2,opt,name=connectionIdentifier,proto3" json:"connectionIdentifier,omitempty"`
 }
 
-func (x *TestCallRequest) Reset() {
-	*x = TestCallRequest{}
+func (x *VmRequest) Reset() {
+	*x = VmRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_agent_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -75,13 +76,13 @@ func (x *TestCallRequest) Reset() {
 	}
 }
 
-func (x *TestCallRequest) String() string {
+func (x *VmRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TestCallRequest) ProtoMessage() {}
+func (*VmRequest) ProtoMessage() {}
 
-func (x *TestCallRequest) ProtoReflect() protoreflect.Message {
+func (x *VmRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_agent_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -93,28 +94,35 @@ func (x *TestCallRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TestCallRequest.ProtoReflect.Descriptor instead.
-func (*TestCallRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use VmRequest.ProtoReflect.Descriptor instead.
+func (*VmRequest) Descriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *TestCallRequest) GetMessage() string {
+func (x *VmRequest) GetLabTag() string {
 	if x != nil {
-		return x.Message
+		return x.LabTag
 	}
 	return ""
 }
 
-type TestCallResponse struct {
+func (x *VmRequest) GetConnectionIdentifier() string {
+	if x != nil {
+		return x.ConnectionIdentifier
+	}
+	return ""
+}
+
+type GetLabRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	LabTag string `protobuf:"bytes,1,opt,name=labTag,proto3" json:"labTag,omitempty"`
 }
 
-func (x *TestCallResponse) Reset() {
-	*x = TestCallResponse{}
+func (x *GetLabRequest) Reset() {
+	*x = GetLabRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_agent_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -122,13 +130,13 @@ func (x *TestCallResponse) Reset() {
 	}
 }
 
-func (x *TestCallResponse) String() string {
+func (x *GetLabRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*TestCallResponse) ProtoMessage() {}
+func (*GetLabRequest) ProtoMessage() {}
 
-func (x *TestCallResponse) ProtoReflect() protoreflect.Message {
+func (x *GetLabRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_agent_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -140,14 +148,1344 @@ func (x *TestCallResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use TestCallResponse.ProtoReflect.Descriptor instead.
-func (*TestCallResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetLabRequest.ProtoReflect.Descriptor instead.
+func (*GetLabRequest) Descriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *TestCallResponse) GetMessage() string {
+func (x *GetLabRequest) GetLabTag() string {
+	if x != nil {
+		return x.LabTag
+	}
+	return ""
+}
+
+type GetLabResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Lab *Lab `protobuf:"bytes,1,opt,name=lab,proto3" json:"lab,omitempty"`
+}
+
+func (x *GetLabResponse) Reset() {
+	*x = GetLabResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetLabResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLabResponse) ProtoMessage() {}
+
+func (x *GetLabResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLabResponse.ProtoReflect.Descriptor instead.
+func (*GetLabResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetLabResponse) GetLab() *Lab {
+	if x != nil {
+		return x.Lab
+	}
+	return nil
+}
+
+type GetHostsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	LabTag string `protobuf:"bytes,1,opt,name=labTag,proto3" json:"labTag,omitempty"`
+}
+
+func (x *GetHostsRequest) Reset() {
+	*x = GetHostsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetHostsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHostsRequest) ProtoMessage() {}
+
+func (x *GetHostsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHostsRequest.ProtoReflect.Descriptor instead.
+func (*GetHostsRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetHostsRequest) GetLabTag() string {
+	if x != nil {
+		return x.LabTag
+	}
+	return ""
+}
+
+type GetHostsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Hosts []string `protobuf:"bytes,1,rep,name=hosts,proto3" json:"hosts,omitempty"`
+}
+
+func (x *GetHostsResponse) Reset() {
+	*x = GetHostsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetHostsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHostsResponse) ProtoMessage() {}
+
+func (x *GetHostsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHostsResponse.ProtoReflect.Descriptor instead.
+func (*GetHostsResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetHostsResponse) GetHosts() []string {
+	if x != nil {
+		return x.Hosts
+	}
+	return nil
+}
+
+type MonitorResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Hb          string     `protobuf:"bytes,1,opt,name=hb,proto3" json:"hb,omitempty"`
+	NewLabs     []*Lab     `protobuf:"bytes,2,rep,name=newLabs,proto3" json:"newLabs,omitempty"`
+	Resources   *Resources `protobuf:"bytes,3,opt,name=resources,proto3" json:"resources,omitempty"`
+	QueuedTasks uint32     `protobuf:"varint,4,opt,name=queuedTasks,proto3" json:"queuedTasks,omitempty"`
+}
+
+func (x *MonitorResponse) Reset() {
+	*x = MonitorResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *MonitorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MonitorResponse) ProtoMessage() {}
+
+func (x *MonitorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MonitorResponse.ProtoReflect.Descriptor instead.
+func (*MonitorResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *MonitorResponse) GetHb() string {
+	if x != nil {
+		return x.Hb
+	}
+	return ""
+}
+
+func (x *MonitorResponse) GetNewLabs() []*Lab {
+	if x != nil {
+		return x.NewLabs
+	}
+	return nil
+}
+
+func (x *MonitorResponse) GetResources() *Resources {
+	if x != nil {
+		return x.Resources
+	}
+	return nil
+}
+
+func (x *MonitorResponse) GetQueuedTasks() uint32 {
+	if x != nil {
+		return x.QueuedTasks
+	}
+	return 0
+}
+
+type Resources struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	MemAvailable   uint64  `protobuf:"varint,1,opt,name=memAvailable,proto3" json:"memAvailable,omitempty"`
+	Cpu            float64 `protobuf:"fixed64,2,opt,name=cpu,proto3" json:"cpu,omitempty"`
+	MemPercentUsed float64 `protobuf:"fixed64,3,opt,name=memPercentUsed,proto3" json:"memPercentUsed,omitempty"`
+	LabCount       uint32  `protobuf:"varint,4,opt,name=labCount,proto3" json:"labCount,omitempty"`
+	VmCount        uint32  `protobuf:"varint,5,opt,name=vmCount,proto3" json:"vmCount,omitempty"`
+	ContainerCount uint32  `protobuf:"varint,6,opt,name=containerCount,proto3" json:"containerCount,omitempty"`
+	MemInstalled   uint64  `protobuf:"varint,7,opt,name=memInstalled,proto3" json:"memInstalled,omitempty"`
+}
+
+func (x *Resources) Reset() {
+	*x = Resources{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Resources) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Resources) ProtoMessage() {}
+
+func (x *Resources) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Resources.ProtoReflect.Descriptor instead.
+func (*Resources) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *Resources) GetMemAvailable() uint64 {
+	if x != nil {
+		return x.MemAvailable
+	}
+	return 0
+}
+
+func (x *Resources) GetCpu() float64 {
+	if x != nil {
+		return x.Cpu
+	}
+	return 0
+}
+
+func (x *Resources) GetMemPercentUsed() float64 {
+	if x != nil {
+		return x.MemPercentUsed
+	}
+	return 0
+}
+
+func (x *Resources) GetLabCount() uint32 {
+	if x != nil {
+		return x.LabCount
+	}
+	return 0
+}
+
+func (x *Resources) GetVmCount() uint32 {
+	if x != nil {
+		return x.VmCount
+	}
+	return 0
+}
+
+func (x *Resources) GetContainerCount() uint32 {
+	if x != nil {
+		return x.ContainerCount
+	}
+	return 0
+}
+
+func (x *Resources) GetMemInstalled() uint64 {
+	if x != nil {
+		return x.MemInstalled
+	}
+	return 0
+}
+
+type InitRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Url        string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	AuthKey    string `protobuf:"bytes,2,opt,name=authKey,proto3" json:"authKey,omitempty"`
+	SignKey    string `protobuf:"bytes,3,opt,name=signKey,proto3" json:"signKey,omitempty"`
+	TlsEnabled bool   `protobuf:"varint,4,opt,name=tlsEnabled,proto3" json:"tlsEnabled,omitempty"`
+}
+
+func (x *InitRequest) Reset() {
+	*x = InitRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *InitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitRequest) ProtoMessage() {}
+
+func (x *InitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitRequest.ProtoReflect.Descriptor instead.
+func (*InitRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *InitRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *InitRequest) GetAuthKey() string {
+	if x != nil {
+		return x.AuthKey
+	}
+	return ""
+}
+
+func (x *InitRequest) GetSignKey() string {
+	if x != nil {
+		return x.SignKey
+	}
+	return ""
+}
+
+func (x *InitRequest) GetTlsEnabled() bool {
+	if x != nil {
+		return x.TlsEnabled
+	}
+	return false
+}
+
+type PingRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Ping string `protobuf:"bytes,1,opt,name=ping,proto3" json:"ping,omitempty"`
+}
+
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *PingRequest) GetPing() string {
+	if x != nil {
+		return x.Ping
+	}
+	return ""
+}
+
+type PingResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Pong         string `protobuf:"bytes,1,opt,name=pong,proto3" json:"pong,omitempty"`
+	MemInstalled uint64 `protobuf:"varint,2,opt,name=memInstalled,proto3" json:"memInstalled,omitempty"`
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *PingResponse) GetPong() string {
+	if x != nil {
+		return x.Pong
+	}
+	return ""
+}
+
+func (x *PingResponse) GetMemInstalled() uint64 {
+	if x != nil {
+		return x.MemInstalled
+	}
+	return 0
+}
+
+type CreatEnvRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	EventTag    string    `protobuf:"bytes,1,opt,name=eventTag,proto3" json:"eventTag,omitempty"`
+	EnvType     int32     `protobuf:"varint,2,opt,name=envType,proto3" json:"envType,omitempty"`
+	Vm          *VmConfig `protobuf:"bytes,3,opt,name=vm,proto3" json:"vm,omitempty"`
+	InitialLabs int32     `protobuf:"varint,4,opt,name=initialLabs,proto3" json:"initialLabs,omitempty"`
+	Exercises   []string  `protobuf:"bytes,5,rep,name=exercises,proto3" json:"exercises,omitempty"`
+	TeamSize    int32     `protobuf:"varint,6,opt,name=teamSize,proto3" json:"teamSize,omitempty"`
+}
+
+func (x *CreatEnvRequest) Reset() {
+	*x = CreatEnvRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreatEnvRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreatEnvRequest) ProtoMessage() {}
+
+func (x *CreatEnvRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreatEnvRequest.ProtoReflect.Descriptor instead.
+func (*CreatEnvRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CreatEnvRequest) GetEventTag() string {
+	if x != nil {
+		return x.EventTag
+	}
+	return ""
+}
+
+func (x *CreatEnvRequest) GetEnvType() int32 {
+	if x != nil {
+		return x.EnvType
+	}
+	return 0
+}
+
+func (x *CreatEnvRequest) GetVm() *VmConfig {
+	if x != nil {
+		return x.Vm
+	}
+	return nil
+}
+
+func (x *CreatEnvRequest) GetInitialLabs() int32 {
+	if x != nil {
+		return x.InitialLabs
+	}
+	return 0
+}
+
+func (x *CreatEnvRequest) GetExercises() []string {
+	if x != nil {
+		return x.Exercises
+	}
+	return nil
+}
+
+func (x *CreatEnvRequest) GetTeamSize() int32 {
+	if x != nil {
+		return x.TeamSize
+	}
+	return 0
+}
+
+type CloseEnvRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	EventTag string `protobuf:"bytes,1,opt,name=eventTag,proto3" json:"eventTag,omitempty"`
+}
+
+func (x *CloseEnvRequest) Reset() {
+	*x = CloseEnvRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CloseEnvRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseEnvRequest) ProtoMessage() {}
+
+func (x *CloseEnvRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseEnvRequest.ProtoReflect.Descriptor instead.
+func (*CloseEnvRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CloseEnvRequest) GetEventTag() string {
+	if x != nil {
+		return x.EventTag
+	}
+	return ""
+}
+
+type CreateLabRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	EventTag string `protobuf:"bytes,1,opt,name=eventTag,proto3" json:"eventTag,omitempty"`
+	IsVPN    bool   `protobuf:"varint,2,opt,name=isVPN,proto3" json:"isVPN,omitempty"`
+}
+
+func (x *CreateLabRequest) Reset() {
+	*x = CreateLabRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateLabRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateLabRequest) ProtoMessage() {}
+
+func (x *CreateLabRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateLabRequest.ProtoReflect.Descriptor instead.
+func (*CreateLabRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *CreateLabRequest) GetEventTag() string {
+	if x != nil {
+		return x.EventTag
+	}
+	return ""
+}
+
+func (x *CreateLabRequest) GetIsVPN() bool {
+	if x != nil {
+		return x.IsVPN
+	}
+	return false
+}
+
+type CreateVpnConfRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	LabTag string `protobuf:"bytes,1,opt,name=labTag,proto3" json:"labTag,omitempty"`
+}
+
+func (x *CreateVpnConfRequest) Reset() {
+	*x = CreateVpnConfRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[14]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateVpnConfRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateVpnConfRequest) ProtoMessage() {}
+
+func (x *CreateVpnConfRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[14]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateVpnConfRequest.ProtoReflect.Descriptor instead.
+func (*CreateVpnConfRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CreateVpnConfRequest) GetLabTag() string {
+	if x != nil {
+		return x.LabTag
+	}
+	return ""
+}
+
+type CreateVpnConfResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Configs []string `protobuf:"bytes,1,rep,name=configs,proto3" json:"configs,omitempty"`
+}
+
+func (x *CreateVpnConfResponse) Reset() {
+	*x = CreateVpnConfResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[15]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateVpnConfResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateVpnConfResponse) ProtoMessage() {}
+
+func (x *CreateVpnConfResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[15]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateVpnConfResponse.ProtoReflect.Descriptor instead.
+func (*CreateVpnConfResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CreateVpnConfResponse) GetConfigs() []string {
+	if x != nil {
+		return x.Configs
+	}
+	return nil
+}
+
+type CloseLabRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	LabTag string `protobuf:"bytes,1,opt,name=labTag,proto3" json:"labTag,omitempty"`
+}
+
+func (x *CloseLabRequest) Reset() {
+	*x = CloseLabRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CloseLabRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseLabRequest) ProtoMessage() {}
+
+func (x *CloseLabRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseLabRequest.ProtoReflect.Descriptor instead.
+func (*CloseLabRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CloseLabRequest) GetLabTag() string {
+	if x != nil {
+		return x.LabTag
+	}
+	return ""
+}
+
+type ExerciseRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	LabTag    string   `protobuf:"bytes,1,opt,name=labTag,proto3" json:"labTag,omitempty"`
+	EnvTag    string   `protobuf:"bytes,2,opt,name=envTag,proto3" json:"envTag,omitempty"`
+	Exercises []string `protobuf:"bytes,3,rep,name=exercises,proto3" json:"exercises,omitempty"`
+	Exercise  string   `protobuf:"bytes,4,opt,name=exercise,proto3" json:"exercise,omitempty"`
+}
+
+func (x *ExerciseRequest) Reset() {
+	*x = ExerciseRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[17]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ExerciseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExerciseRequest) ProtoMessage() {}
+
+func (x *ExerciseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[17]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExerciseRequest.ProtoReflect.Descriptor instead.
+func (*ExerciseRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ExerciseRequest) GetLabTag() string {
+	if x != nil {
+		return x.LabTag
+	}
+	return ""
+}
+
+func (x *ExerciseRequest) GetEnvTag() string {
+	if x != nil {
+		return x.EnvTag
+	}
+	return ""
+}
+
+func (x *ExerciseRequest) GetExercises() []string {
+	if x != nil {
+		return x.Exercises
+	}
+	return nil
+}
+
+func (x *ExerciseRequest) GetExercise() string {
+	if x != nil {
+		return x.Exercise
+	}
+	return ""
+}
+
+type VmConfig struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Image    string  `protobuf:"bytes,1,opt,name=image,proto3" json:"image,omitempty"`
+	MemoryMB uint32  `protobuf:"varint,2,opt,name=memoryMB,proto3" json:"memoryMB,omitempty"`
+	Cpu      float64 `protobuf:"fixed64,3,opt,name=cpu,proto3" json:"cpu,omitempty"`
+}
+
+func (x *VmConfig) Reset() {
+	*x = VmConfig{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[18]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *VmConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VmConfig) ProtoMessage() {}
+
+func (x *VmConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[18]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VmConfig.ProtoReflect.Descriptor instead.
+func (*VmConfig) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *VmConfig) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *VmConfig) GetMemoryMB() uint32 {
+	if x != nil {
+		return x.MemoryMB
+	}
+	return 0
+}
+
+func (x *VmConfig) GetCpu() float64 {
+	if x != nil {
+		return x.Cpu
+	}
+	return 0
+}
+
+type StatusResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+}
+
+func (x *StatusResponse) Reset() {
+	*x = StatusResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[19]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatusResponse) ProtoMessage() {}
+
+func (x *StatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[19]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
+func (*StatusResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *StatusResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
+	}
+	return ""
+}
+
+type Lab struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tag       string      `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	EventTag  string      `protobuf:"bytes,2,opt,name=eventTag,proto3" json:"eventTag,omitempty"`
+	Exercises []*Exercise `protobuf:"bytes,3,rep,name=exercises,proto3" json:"exercises,omitempty"`
+	IsVPN     bool        `protobuf:"varint,4,opt,name=isVPN,proto3" json:"isVPN,omitempty"`
+	GuacCreds *GuacCreds  `protobuf:"bytes,5,opt,name=guacCreds,proto3" json:"guacCreds,omitempty"`
+	VpnConfs  []string    `protobuf:"bytes,6,rep,name=vpnConfs,proto3" json:"vpnConfs,omitempty"`
+}
+
+func (x *Lab) Reset() {
+	*x = Lab{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[20]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Lab) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Lab) ProtoMessage() {}
+
+func (x *Lab) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[20]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Lab.ProtoReflect.Descriptor instead.
+func (*Lab) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *Lab) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *Lab) GetEventTag() string {
+	if x != nil {
+		return x.EventTag
+	}
+	return ""
+}
+
+func (x *Lab) GetExercises() []*Exercise {
+	if x != nil {
+		return x.Exercises
+	}
+	return nil
+}
+
+func (x *Lab) GetIsVPN() bool {
+	if x != nil {
+		return x.IsVPN
+	}
+	return false
+}
+
+func (x *Lab) GetGuacCreds() *GuacCreds {
+	if x != nil {
+		return x.GuacCreds
+	}
+	return nil
+}
+
+func (x *Lab) GetVpnConfs() []string {
+	if x != nil {
+		return x.VpnConfs
+	}
+	return nil
+}
+
+type Exercise struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tag            string           `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	ChildExercises []*ChildExercise `protobuf:"bytes,2,rep,name=childExercises,proto3" json:"childExercises,omitempty"`
+	Machines       []*Machine       `protobuf:"bytes,3,rep,name=machines,proto3" json:"machines,omitempty"`
+}
+
+func (x *Exercise) Reset() {
+	*x = Exercise{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[21]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Exercise) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Exercise) ProtoMessage() {}
+
+func (x *Exercise) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[21]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Exercise.ProtoReflect.Descriptor instead.
+func (*Exercise) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *Exercise) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *Exercise) GetChildExercises() []*ChildExercise {
+	if x != nil {
+		return x.ChildExercises
+	}
+	return nil
+}
+
+func (x *Exercise) GetMachines() []*Machine {
+	if x != nil {
+		return x.Machines
+	}
+	return nil
+}
+
+type ChildExercise struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tag  string `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	Flag string `protobuf:"bytes,2,opt,name=flag,proto3" json:"flag,omitempty"`
+}
+
+func (x *ChildExercise) Reset() {
+	*x = ChildExercise{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[22]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ChildExercise) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChildExercise) ProtoMessage() {}
+
+func (x *ChildExercise) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[22]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChildExercise.ProtoReflect.Descriptor instead.
+func (*ChildExercise) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ChildExercise) GetTag() string {
+	if x != nil {
+		return x.Tag
+	}
+	return ""
+}
+
+func (x *ChildExercise) GetFlag() string {
+	if x != nil {
+		return x.Flag
+	}
+	return ""
+}
+
+type Machine struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id     string   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status string   `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Image  string   `protobuf:"bytes,3,opt,name=image,proto3" json:"image,omitempty"`
+	Errors []string `protobuf:"bytes,4,rep,name=errors,proto3" json:"errors,omitempty"`
+	Type   string   `protobuf:"bytes,5,opt,name=type,proto3" json:"type,omitempty"`
+}
+
+func (x *Machine) Reset() {
+	*x = Machine{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[23]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Machine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Machine) ProtoMessage() {}
+
+func (x *Machine) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[23]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Machine.ProtoReflect.Descriptor instead.
+func (*Machine) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *Machine) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Machine) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Machine) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *Machine) GetErrors() []string {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
+func (x *Machine) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+type GuacCreds struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Username string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+}
+
+func (x *GuacCreds) Reset() {
+	*x = GuacCreds{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agent_proto_msgTypes[24]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GuacCreds) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GuacCreds) ProtoMessage() {}
+
+func (x *GuacCreds) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[24]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GuacCreds.ProtoReflect.Descriptor instead.
+func (*GuacCreds) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GuacCreds) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *GuacCreds) GetPassword() string {
+	if x != nil {
+		return x.Password
 	}
 	return ""
 }
@@ -156,17 +1494,209 @@ var File_agent_proto protoreflect.FileDescriptor
 
 var file_agent_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x61,
-	0x67, 0x65, 0x6e, 0x74, 0x22, 0x07, 0x0a, 0x05, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x2b, 0x0a,
-	0x0f, 0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x6c, 0x6c, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0x2c, 0x0a, 0x10, 0x54, 0x65,
-	0x73, 0x74, 0x43, 0x61, 0x6c, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18,
-	0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x32, 0x46, 0x0a, 0x05, 0x41, 0x67, 0x65, 0x6e,
-	0x74, 0x12, 0x3d, 0x0a, 0x08, 0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x6c, 0x6c, 0x12, 0x16, 0x2e,
-	0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x6c, 0x6c, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x54, 0x65,
-	0x73, 0x74, 0x43, 0x61, 0x6c, 0x6c, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
+	0x67, 0x65, 0x6e, 0x74, 0x22, 0x07, 0x0a, 0x05, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x57, 0x0a,
+	0x09, 0x56, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6c, 0x61,
+	0x62, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6c, 0x61, 0x62, 0x54,
+	0x61, 0x67, 0x12, 0x32, 0x0a, 0x14, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x49, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x66, 0x69, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x14, 0x63, 0x6f, 0x6e, 0x6e, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x65, 0x6e,
+	0x74, 0x69, 0x66, 0x69, 0x65, 0x72, 0x22, 0x27, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x62,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61,
+	0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x22,
+	0x2e, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x1c, 0x0a, 0x03, 0x6c, 0x61, 0x62, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a,
+	0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x4c, 0x61, 0x62, 0x52, 0x03, 0x6c, 0x61, 0x62, 0x22,
+	0x29, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x48, 0x6f, 0x73, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x22, 0x28, 0x0a, 0x10, 0x47, 0x65,
+	0x74, 0x48, 0x6f, 0x73, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x14,
+	0x0a, 0x05, 0x68, 0x6f, 0x73, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x68,
+	0x6f, 0x73, 0x74, 0x73, 0x22, 0x99, 0x01, 0x0a, 0x0f, 0x4d, 0x6f, 0x6e, 0x69, 0x74, 0x6f, 0x72,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x68, 0x62, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x68, 0x62, 0x12, 0x24, 0x0a, 0x07, 0x6e, 0x65, 0x77, 0x4c,
+	0x61, 0x62, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x61, 0x67, 0x65, 0x6e,
+	0x74, 0x2e, 0x4c, 0x61, 0x62, 0x52, 0x07, 0x6e, 0x65, 0x77, 0x4c, 0x61, 0x62, 0x73, 0x12, 0x2e,
+	0x0a, 0x09, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x10, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72,
+	0x63, 0x65, 0x73, 0x52, 0x09, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x12, 0x20,
+	0x0a, 0x0b, 0x71, 0x75, 0x65, 0x75, 0x65, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x18, 0x04, 0x20,
+	0x01, 0x28, 0x0d, 0x52, 0x0b, 0x71, 0x75, 0x65, 0x75, 0x65, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73,
+	0x22, 0xeb, 0x01, 0x0a, 0x09, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x12, 0x22,
+	0x0a, 0x0c, 0x6d, 0x65, 0x6d, 0x41, 0x76, 0x61, 0x69, 0x6c, 0x61, 0x62, 0x6c, 0x65, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x04, 0x52, 0x0c, 0x6d, 0x65, 0x6d, 0x41, 0x76, 0x61, 0x69, 0x6c, 0x61, 0x62,
+	0x6c, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x70, 0x75, 0x18, 0x02, 0x20, 0x01, 0x28, 0x01, 0x52,
+	0x03, 0x63, 0x70, 0x75, 0x12, 0x26, 0x0a, 0x0e, 0x6d, 0x65, 0x6d, 0x50, 0x65, 0x72, 0x63, 0x65,
+	0x6e, 0x74, 0x55, 0x73, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x01, 0x52, 0x0e, 0x6d, 0x65,
+	0x6d, 0x50, 0x65, 0x72, 0x63, 0x65, 0x6e, 0x74, 0x55, 0x73, 0x65, 0x64, 0x12, 0x1a, 0x0a, 0x08,
+	0x6c, 0x61, 0x62, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08,
+	0x6c, 0x61, 0x62, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x6d, 0x43, 0x6f,
+	0x75, 0x6e, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x76, 0x6d, 0x43, 0x6f, 0x75,
+	0x6e, 0x74, 0x12, 0x26, 0x0a, 0x0e, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x43,
+	0x6f, 0x75, 0x6e, 0x74, 0x18, 0x06, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0e, 0x63, 0x6f, 0x6e, 0x74,
+	0x61, 0x69, 0x6e, 0x65, 0x72, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x22, 0x0a, 0x0c, 0x6d, 0x65,
+	0x6d, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6c, 0x6c, 0x65, 0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x04,
+	0x52, 0x0c, 0x6d, 0x65, 0x6d, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6c, 0x6c, 0x65, 0x64, 0x22, 0x73,
+	0x0a, 0x0b, 0x49, 0x6e, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x10, 0x0a,
+	0x03, 0x75, 0x72, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x12,
+	0x18, 0x0a, 0x07, 0x61, 0x75, 0x74, 0x68, 0x4b, 0x65, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x07, 0x61, 0x75, 0x74, 0x68, 0x4b, 0x65, 0x79, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x69, 0x67,
+	0x6e, 0x4b, 0x65, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x73, 0x69, 0x67, 0x6e,
+	0x4b, 0x65, 0x79, 0x12, 0x1e, 0x0a, 0x0a, 0x74, 0x6c, 0x73, 0x45, 0x6e, 0x61, 0x62, 0x6c, 0x65,
+	0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0a, 0x74, 0x6c, 0x73, 0x45, 0x6e, 0x61, 0x62,
+	0x6c, 0x65, 0x64, 0x22, 0x21, 0x0a, 0x0b, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x04, 0x70, 0x69, 0x6e, 0x67, 0x22, 0x46, 0x0a, 0x0c, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x6f, 0x6e, 0x67, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x6f, 0x6e, 0x67, 0x12, 0x22, 0x0a, 0x0c, 0x6d, 0x65,
+	0x6d, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6c, 0x6c, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04,
+	0x52, 0x0c, 0x6d, 0x65, 0x6d, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6c, 0x6c, 0x65, 0x64, 0x22, 0xc4,
+	0x01, 0x0a, 0x0f, 0x43, 0x72, 0x65, 0x61, 0x74, 0x45, 0x6e, 0x76, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x61, 0x67, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x54, 0x61, 0x67, 0x12, 0x18,
+	0x0a, 0x07, 0x65, 0x6e, 0x76, 0x54, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x07, 0x65, 0x6e, 0x76, 0x54, 0x79, 0x70, 0x65, 0x12, 0x1f, 0x0a, 0x02, 0x76, 0x6d, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x56, 0x6d, 0x43,
+	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x02, 0x76, 0x6d, 0x12, 0x20, 0x0a, 0x0b, 0x69, 0x6e, 0x69,
+	0x74, 0x69, 0x61, 0x6c, 0x4c, 0x61, 0x62, 0x73, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0b,
+	0x69, 0x6e, 0x69, 0x74, 0x69, 0x61, 0x6c, 0x4c, 0x61, 0x62, 0x73, 0x12, 0x1c, 0x0a, 0x09, 0x65,
+	0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09,
+	0x65, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x12, 0x1a, 0x0a, 0x08, 0x74, 0x65, 0x61,
+	0x6d, 0x53, 0x69, 0x7a, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x74, 0x65, 0x61,
+	0x6d, 0x53, 0x69, 0x7a, 0x65, 0x22, 0x2d, 0x0a, 0x0f, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x45, 0x6e,
+	0x76, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x76, 0x65, 0x6e,
+	0x74, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x65, 0x76, 0x65, 0x6e,
+	0x74, 0x54, 0x61, 0x67, 0x22, 0x44, 0x0a, 0x10, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4c, 0x61,
+	0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x76, 0x65, 0x6e,
+	0x74, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x65, 0x76, 0x65, 0x6e,
+	0x74, 0x54, 0x61, 0x67, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x73, 0x56, 0x50, 0x4e, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x08, 0x52, 0x05, 0x69, 0x73, 0x56, 0x50, 0x4e, 0x22, 0x2e, 0x0a, 0x14, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x56, 0x70, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x22, 0x31, 0x0a, 0x15, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x56, 0x70, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73, 0x22, 0x29, 0x0a,
+	0x0f, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x4c, 0x61, 0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x16, 0x0a, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x06, 0x6c, 0x61, 0x62, 0x54, 0x61, 0x67, 0x22, 0x7b, 0x0a, 0x0f, 0x45, 0x78, 0x65, 0x72,
+	0x63, 0x69, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6c,
+	0x61, 0x62, 0x54, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x6c, 0x61, 0x62,
+	0x54, 0x61, 0x67, 0x12, 0x16, 0x0a, 0x06, 0x65, 0x6e, 0x76, 0x54, 0x61, 0x67, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x65, 0x6e, 0x76, 0x54, 0x61, 0x67, 0x12, 0x1c, 0x0a, 0x09, 0x65,
+	0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x09, 0x52, 0x09,
+	0x65, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x12, 0x1a, 0x0a, 0x08, 0x65, 0x78, 0x65,
+	0x72, 0x63, 0x69, 0x73, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x65, 0x78, 0x65,
+	0x72, 0x63, 0x69, 0x73, 0x65, 0x22, 0x4e, 0x0a, 0x08, 0x56, 0x6d, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x05, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6d, 0x65, 0x6d, 0x6f, 0x72,
+	0x79, 0x4d, 0x42, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x08, 0x6d, 0x65, 0x6d, 0x6f, 0x72,
+	0x79, 0x4d, 0x42, 0x12, 0x10, 0x0a, 0x03, 0x63, 0x70, 0x75, 0x18, 0x03, 0x20, 0x01, 0x28, 0x01,
+	0x52, 0x03, 0x63, 0x70, 0x75, 0x22, 0x2a, 0x0a, 0x0e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x22, 0xc4, 0x01, 0x0a, 0x03, 0x4c, 0x61, 0x62, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x74, 0x61, 0x67, 0x12, 0x1a, 0x0a, 0x08, 0x65,
+	0x76, 0x65, 0x6e, 0x74, 0x54, 0x61, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x65,
+	0x76, 0x65, 0x6e, 0x74, 0x54, 0x61, 0x67, 0x12, 0x2d, 0x0a, 0x09, 0x65, 0x78, 0x65, 0x72, 0x63,
+	0x69, 0x73, 0x65, 0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x61, 0x67, 0x65,
+	0x6e, 0x74, 0x2e, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x52, 0x09, 0x65, 0x78, 0x65,
+	0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x69, 0x73, 0x56, 0x50, 0x4e, 0x18,
+	0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x69, 0x73, 0x56, 0x50, 0x4e, 0x12, 0x2e, 0x0a, 0x09,
+	0x67, 0x75, 0x61, 0x63, 0x43, 0x72, 0x65, 0x64, 0x73, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x10, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x47, 0x75, 0x61, 0x63, 0x43, 0x72, 0x65, 0x64,
+	0x73, 0x52, 0x09, 0x67, 0x75, 0x61, 0x63, 0x43, 0x72, 0x65, 0x64, 0x73, 0x12, 0x1a, 0x0a, 0x08,
+	0x76, 0x70, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x73, 0x18, 0x06, 0x20, 0x03, 0x28, 0x09, 0x52, 0x08,
+	0x76, 0x70, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x73, 0x22, 0x86, 0x01, 0x0a, 0x08, 0x45, 0x78, 0x65,
+	0x72, 0x63, 0x69, 0x73, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x03, 0x74, 0x61, 0x67, 0x12, 0x3c, 0x0a, 0x0e, 0x63, 0x68, 0x69, 0x6c, 0x64,
+	0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x14, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x68, 0x69, 0x6c, 0x64, 0x45, 0x78, 0x65,
+	0x72, 0x63, 0x69, 0x73, 0x65, 0x52, 0x0e, 0x63, 0x68, 0x69, 0x6c, 0x64, 0x45, 0x78, 0x65, 0x72,
+	0x63, 0x69, 0x73, 0x65, 0x73, 0x12, 0x2a, 0x0a, 0x08, 0x6d, 0x61, 0x63, 0x68, 0x69, 0x6e, 0x65,
+	0x73, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e,
+	0x4d, 0x61, 0x63, 0x68, 0x69, 0x6e, 0x65, 0x52, 0x08, 0x6d, 0x61, 0x63, 0x68, 0x69, 0x6e, 0x65,
+	0x73, 0x22, 0x35, 0x0a, 0x0d, 0x43, 0x68, 0x69, 0x6c, 0x64, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69,
+	0x73, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x74, 0x61, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x03, 0x74, 0x61, 0x67, 0x12, 0x12, 0x0a, 0x04, 0x66, 0x6c, 0x61, 0x67, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x66, 0x6c, 0x61, 0x67, 0x22, 0x73, 0x0a, 0x07, 0x4d, 0x61, 0x63, 0x68,
+	0x69, 0x6e, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x14, 0x0a, 0x05, 0x69,
+	0x6d, 0x61, 0x67, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x69, 0x6d, 0x61, 0x67,
+	0x65, 0x12, 0x16, 0x0a, 0x06, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28,
+	0x09, 0x52, 0x06, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x73, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70,
+	0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x43, 0x0a,
+	0x09, 0x47, 0x75, 0x61, 0x63, 0x43, 0x72, 0x65, 0x64, 0x73, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73,
+	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73,
+	0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f,
+	0x72, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f,
+	0x72, 0x64, 0x32, 0xab, 0x08, 0x0a, 0x05, 0x41, 0x67, 0x65, 0x6e, 0x74, 0x12, 0x33, 0x0a, 0x04,
+	0x49, 0x6e, 0x69, 0x74, 0x12, 0x12, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x49, 0x6e, 0x69,
+	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74,
+	0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x00, 0x12, 0x44, 0x0a, 0x11, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x45, 0x6e, 0x76, 0x69, 0x72,
+	0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43,
+	0x72, 0x65, 0x61, 0x74, 0x45, 0x6e, 0x76, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15,
+	0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x43, 0x0a, 0x10, 0x43, 0x6c, 0x6f, 0x73, 0x65,
+	0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x16, 0x2e, 0x61, 0x67,
+	0x65, 0x6e, 0x74, 0x2e, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x45, 0x6e, 0x76, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x43, 0x0a, 0x0f,
+	0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4c, 0x61, 0x62, 0x46, 0x6f, 0x72, 0x45, 0x6e, 0x76, 0x12,
+	0x17, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4c, 0x61,
+	0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74,
+	0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x00, 0x12, 0x52, 0x0a, 0x13, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x56, 0x70, 0x6e, 0x43, 0x6f,
+	0x6e, 0x66, 0x46, 0x6f, 0x72, 0x4c, 0x61, 0x62, 0x12, 0x1b, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74,
+	0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x56, 0x70, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1c, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x56, 0x70, 0x6e, 0x43, 0x6f, 0x6e, 0x66, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x3b, 0x0a, 0x08, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x4c, 0x61,
+	0x62, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x6c, 0x6f, 0x73, 0x65, 0x4c,
+	0x61, 0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e,
+	0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x00, 0x12, 0x44, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73,
+	0x65, 0x73, 0x54, 0x6f, 0x45, 0x6e, 0x76, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e,
+	0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x44, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x45,
+	0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x73, 0x54, 0x6f, 0x4c, 0x61, 0x62, 0x12, 0x16, 0x2e,
+	0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74,
+	0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x45,
+	0x0a, 0x12, 0x52, 0x65, 0x73, 0x65, 0x74, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x49,
+	0x6e, 0x4c, 0x61, 0x62, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x45, 0x78, 0x65,
+	0x72, 0x63, 0x69, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61,
+	0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x45, 0x0a, 0x12, 0x53, 0x74, 0x61, 0x72, 0x74, 0x45, 0x78,
+	0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x49, 0x6e, 0x4c, 0x61, 0x62, 0x12, 0x16, 0x2e, 0x61, 0x67,
+	0x65, 0x6e, 0x74, 0x2e, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x74,
+	0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x44, 0x0a, 0x11,
+	0x53, 0x74, 0x6f, 0x70, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69, 0x73, 0x65, 0x49, 0x6e, 0x4c, 0x61,
+	0x62, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x45, 0x78, 0x65, 0x72, 0x63, 0x69,
+	0x73, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e,
+	0x74, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x00, 0x12, 0x31, 0x0a, 0x04, 0x50, 0x69, 0x6e, 0x67, 0x12, 0x12, 0x2e, 0x61, 0x67, 0x65,
+	0x6e, 0x74, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x13,
+	0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x41, 0x0a, 0x0d, 0x4d, 0x6f, 0x6e, 0x69, 0x74, 0x6f, 0x72,
+	0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x12, 0x12, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x50,
+	0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x61, 0x67, 0x65,
+	0x6e, 0x74, 0x2e, 0x4d, 0x6f, 0x6e, 0x69, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x00, 0x28, 0x01, 0x30, 0x01, 0x12, 0x37, 0x0a, 0x06, 0x47, 0x65, 0x74, 0x4c,
+	0x61, 0x62, 0x12, 0x14, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61,
+	0x62, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74,
+	0x2e, 0x47, 0x65, 0x74, 0x4c, 0x61, 0x62, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
+	0x00, 0x12, 0x42, 0x0a, 0x0d, 0x47, 0x65, 0x74, 0x48, 0x6f, 0x73, 0x74, 0x73, 0x49, 0x6e, 0x4c,
+	0x61, 0x62, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x47, 0x65, 0x74, 0x48, 0x6f,
+	0x73, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x61, 0x67, 0x65,
+	0x6e, 0x74, 0x2e, 0x47, 0x65, 0x74, 0x48, 0x6f, 0x73, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x39, 0x0a, 0x0c, 0x52, 0x65, 0x73, 0x65, 0x74, 0x56, 0x6d,
+	0x49, 0x6e, 0x4c, 0x61, 0x62, 0x12, 0x10, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x56, 0x6d,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e,
+	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
 	0x42, 0x36, 0x5a, 0x34, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
 	0x61, 0x75, 0x2d, 0x6e, 0x65, 0x74, 0x77, 0x6f, 0x72, 0x6b, 0x2d, 0x73, 0x65, 0x63, 0x75, 0x72,
 	0x69, 0x74, 0x79, 0x2f, 0x68, 0x61, 0x61, 0x75, 0x6b, 0x69, 0x6e, 0x73, 0x2d, 0x61, 0x67, 0x65,
@@ -185,20 +1715,80 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_agent_proto_goTypes = []interface{}{
-	(*Empty)(nil),            // 0: agent.Empty
-	(*TestCallRequest)(nil),  // 1: agent.TestCallRequest
-	(*TestCallResponse)(nil), // 2: agent.TestCallResponse
+	(*Empty)(nil),                 // 0: agent.Empty
+	(*VmRequest)(nil),             // 1: agent.VmRequest
+	(*GetLabRequest)(nil),         // 2: agent.GetLabRequest
+	(*GetLabResponse)(nil),        // 3: agent.GetLabResponse
+	(*GetHostsRequest)(nil),       // 4: agent.GetHostsRequest
+	(*GetHostsResponse)(nil),      // 5: agent.GetHostsResponse
+	(*MonitorResponse)(nil),       // 6: agent.MonitorResponse
+	(*Resources)(nil),             // 7: agent.Resources
+	(*InitRequest)(nil),           // 8: agent.InitRequest
+	(*PingRequest)(nil),           // 9: agent.PingRequest
+	(*PingResponse)(nil),          // 10: agent.PingResponse
+	(*CreatEnvRequest)(nil),       // 11: agent.CreatEnvRequest
+	(*CloseEnvRequest)(nil),       // 12: agent.CloseEnvRequest
+	(*CreateLabRequest)(nil),      // 13: agent.CreateLabRequest
+	(*CreateVpnConfRequest)(nil),  // 14: agent.CreateVpnConfRequest
+	(*CreateVpnConfResponse)(nil), // 15: agent.CreateVpnConfResponse
+	(*CloseLabRequest)(nil),       // 16: agent.CloseLabRequest
+	(*ExerciseRequest)(nil),       // 17: agent.ExerciseRequest
+	(*VmConfig)(nil),              // 18: agent.VmConfig
+	(*StatusResponse)(nil),        // 19: agent.StatusResponse
+	(*Lab)(nil),                   // 20: agent.Lab
+	(*Exercise)(nil),              // 21: agent.Exercise
+	(*ChildExercise)(nil),         // 22: agent.ChildExercise
+	(*Machine)(nil),               // 23: agent.Machine
+	(*GuacCreds)(nil),             // 24: agent.GuacCreds
 }
 var file_agent_proto_depIdxs = []int32{
-	1, // 0: agent.Agent.TestCall:input_type -> agent.TestCallRequest
-	2, // 1: agent.Agent.TestCall:output_type -> agent.TestCallResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	20, // 0: agent.GetLabResponse.lab:type_name -> agent.Lab
+	20, // 1: agent.MonitorResponse.newLabs:type_name -> agent.Lab
+	7,  // 2: agent.MonitorResponse.resources:type_name -> agent.Resources
+	18, // 3: agent.CreatEnvRequest.vm:type_name -> agent.VmConfig
+	21, // 4: agent.Lab.exercises:type_name -> agent.Exercise
+	24, // 5: agent.Lab.guacCreds:type_name -> agent.GuacCreds
+	22, // 6: agent.Exercise.childExercises:type_name -> agent.ChildExercise
+	23, // 7: agent.Exercise.machines:type_name -> agent.Machine
+	8,  // 8: agent.Agent.Init:input_type -> agent.InitRequest
+	11, // 9: agent.Agent.CreateEnvironment:input_type -> agent.CreatEnvRequest
+	12, // 10: agent.Agent.CloseEnvironment:input_type -> agent.CloseEnvRequest
+	13, // 11: agent.Agent.CreateLabForEnv:input_type -> agent.CreateLabRequest
+	14, // 12: agent.Agent.CreateVpnConfForLab:input_type -> agent.CreateVpnConfRequest
+	16, // 13: agent.Agent.CloseLab:input_type -> agent.CloseLabRequest
+	17, // 14: agent.Agent.AddExercisesToEnv:input_type -> agent.ExerciseRequest
+	17, // 15: agent.Agent.AddExercisesToLab:input_type -> agent.ExerciseRequest
+	17, // 16: agent.Agent.ResetExerciseInLab:input_type -> agent.ExerciseRequest
+	17, // 17: agent.Agent.StartExerciseInLab:input_type -> agent.ExerciseRequest
+	17, // 18: agent.Agent.StopExerciseInLab:input_type -> agent.ExerciseRequest
+	9,  // 19: agent.Agent.Ping:input_type -> agent.PingRequest
+	9,  // 20: agent.Agent.MonitorStream:input_type -> agent.PingRequest
+	2,  // 21: agent.Agent.GetLab:input_type -> agent.GetLabRequest
+	4,  // 22: agent.Agent.GetHostsInLab:input_type -> agent.GetHostsRequest
+	1,  // 23: agent.Agent.ResetVmInLab:input_type -> agent.VmRequest
+	19, // 24: agent.Agent.Init:output_type -> agent.StatusResponse
+	19, // 25: agent.Agent.CreateEnvironment:output_type -> agent.StatusResponse
+	19, // 26: agent.Agent.CloseEnvironment:output_type -> agent.StatusResponse
+	19, // 27: agent.Agent.CreateLabForEnv:output_type -> agent.StatusResponse
+	15, // 28: agent.Agent.CreateVpnConfForLab:output_type -> agent.CreateVpnConfResponse
+	19, // 29: agent.Agent.CloseLab:output_type -> agent.StatusResponse
+	19, // 30: agent.Agent.AddExercisesToEnv:output_type -> agent.StatusResponse
+	19, // 31: agent.Agent.AddExercisesToLab:output_type -> agent.StatusResponse
+	19, // 32: agent.Agent.ResetExerciseInLab:output_type -> agent.StatusResponse
+	19, // 33: agent.Agent.StartExerciseInLab:output_type -> agent.StatusResponse
+	19, // 34: agent.Agent.StopExerciseInLab:output_type -> agent.StatusResponse
+	10, // 35: agent.Agent.Ping:output_type -> agent.PingResponse
+	6,  // 36: agent.Agent.MonitorStream:output_type -> agent.MonitorResponse
+	3,  // 37: agent.Agent.GetLab:output_type -> agent.GetLabResponse
+	5,  // 38: agent.Agent.GetHostsInLab:output_type -> agent.GetHostsResponse
+	19, // 39: agent.Agent.ResetVmInLab:output_type -> agent.StatusResponse
+	24, // [24:40] is the sub-list for method output_type
+	8,  // [8:24] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -220,7 +1810,7 @@ func file_agent_proto_init() {
 			}
 		}
 		file_agent_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TestCallRequest); i {
+			switch v := v.(*VmRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -232,7 +1822,271 @@ func file_agent_proto_init() {
 			}
 		}
 		file_agent_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TestCallResponse); i {
+			switch v := v.(*GetLabRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetLabResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetHostsRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetHostsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*MonitorResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Resources); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*InitRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PingRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PingResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreatEnvRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CloseEnvRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateLabRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateVpnConfRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateVpnConfResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CloseLabRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ExerciseRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*VmConfig); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StatusResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Lab); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Exercise); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ChildExercise); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Machine); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agent_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GuacCreds); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -250,7 +2104,7 @@ func file_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_agent_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   25,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
