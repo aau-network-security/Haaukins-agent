@@ -24,7 +24,7 @@ func (a *Agent) RunGuacProxy() error {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"POST", "GET", "OPTIONS", "PUT", "DELETE"},
-		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Origin", "Cache-Control", "X-Requested-With"},
+		AllowHeaders:     []string{"Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Origin", "Cache-Control", "X-Requested-With", "pragma", "guacamole-token", "accept-language"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -38,8 +38,8 @@ func (a *Agent) RunGuacProxy() error {
 	r.Any("/guacamole/*proxyPath", a.proxy)
 	r.GET("/guaclogin", a.guaclogin)
 
-	port := fmt.Sprintf(":%d", a.config.ProxyPort)
-	return r.Run(port)
+	listenAddress := fmt.Sprintf("%s:%d", a.config.ListeningIp, a.config.ProxyPort)
+	return r.Run(listenAddress)
 }
 
 // The guacamole proxy handler uses the subdomain of a request like "http://test.localhost:<proxyPort>/guacamole", to guide a participant to the right guacamole
@@ -87,8 +87,7 @@ func (a *Agent) guaclogin(c *gin.Context) {
 
 	username := c.Query("username")
 	password := c.Query("password")
-	vid := c.Query("vid")
-	if username == "" || password == "" || vid == "" {
+	if username == "" || password == "" {
 		c.JSON(http.StatusBadRequest, ProxyResponse{Message: "Bad request"})
 		return
 	}

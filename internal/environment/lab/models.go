@@ -27,6 +27,7 @@ type Lab struct {
 	IsVPN             bool
 	GuacUsername      string
 	GuacPassword      string
+	VpnConfs          []string
 }
 
 type LabConf struct {

@@ -202,7 +202,7 @@ func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 	var opts []ContainerOptions
 
 	for _, conf := range e.Instance {
-		var challenges []Challenge
+		var childExercises []ChildExercise
 		envVars := make(map[string]string)
 
 		for _, flag := range conf.Flags {
@@ -218,7 +218,7 @@ func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 				}
 			}
 
-			challenges = append(challenges, Challenge{
+			childExercises = append(childExercises, ChildExercise{
 				Name:  flag.Name,
 				Tag:   flag.Tag,
 				Value: value,
@@ -246,24 +246,24 @@ func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 		}
 
 		opts = append(opts, ContainerOptions{
-			DockerConf: spec,
-			Records:    conf.Records,
-			Challenges: challenges,
+			DockerConf:     spec,
+			Records:        conf.Records,
+			ChildExercises: childExercises,
 		})
 	}
 
 	return opts
 }
 
-func (e *Exercise) GetChallenges() []Challenge {
-	var challenges []Challenge
+func (e *Exercise) GetChildExercises() []ChildExercise {
+	var childExercises []ChildExercise
 	for _, opt := range e.ContainerOpts {
-		challenges = append(challenges, opt.Challenges...)
+		childExercises = append(childExercises, opt.ChildExercises...)
 	}
 
 	for _, opt := range e.VboxOpts {
 		for _, f := range opt.Flags {
-			challenges = append(challenges, Challenge{
+			childExercises = append(childExercises, ChildExercise{
 				Name:  f.Name,
 				Tag:   f.Tag,
 				Value: f.StaticFlag,
@@ -271,7 +271,7 @@ func (e *Exercise) GetChallenges() []Challenge {
 		}
 	}
 
-	return challenges
+	return childExercises
 }
 
 func (e *Exercise) InstanceInfo() []virtual.InstanceInfo {

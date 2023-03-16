@@ -1,6 +1,9 @@
 host: localhost
+listening-ip: "127.0.0.1" #Leave out if you want to listen on 0.0.0.0
 grpcPort: 8081
 proxyPort: 8082
+
+
 auth-key: test-auth-key
 sign-key: test-sign-key
 max-workers: 5

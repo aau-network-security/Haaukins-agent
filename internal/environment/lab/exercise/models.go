@@ -43,9 +43,9 @@ type ExerciseInstanceConfig struct {
 }
 
 type ContainerOptions struct {
-	DockerConf virtual.ContainerConfig
-	Records    []RecordConfig
-	Challenges []Challenge
+	DockerConf     virtual.ContainerConfig
+	Records        []RecordConfig
+	ChildExercises []ChildExercise
 }
 
 type ChildrenChalConfig struct {
@@ -66,7 +66,7 @@ type EnvVarConfig struct {
 	Value  string `json:"value,omitempty"`
 }
 
-type Challenge struct {
+type ChildExercise struct {
 	Name  string //challenge name
 	Tag   string //challenge tag
 	Value string //challenge flag value

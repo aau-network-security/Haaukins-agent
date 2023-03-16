@@ -14,14 +14,12 @@ import (
 // However the models in the state only has values which can be masharled to a json string since alot of the models in the packages holds interfaces, functions etc. which cannot be marshalled.
 // So the state variables will be carefully choosen in order to resume the state most effectively.
 
-
-
 type Environment struct {
 	EnvConfig EnvConfig
 	Guac      Guacamole
 	IpT       IPTables
 	IpRules   map[string]env.IpRules
-	IpAddrs   []int
+	IpAddrs   [][]int
 	Labs      map[string]Lab
 }
 
@@ -33,6 +31,7 @@ type EnvConfig struct {
 	VpnConfig       wg.WireGuardConfig
 	LabConf         LabConf
 	Status          env.Status
+	TeamSize        int
 }
 
 type Lab struct {
@@ -50,6 +49,7 @@ type Lab struct {
 	IsVPN             bool
 	GuacUsername      string
 	GuacPassword      string
+	VpnConfs          []string
 }
 
 type LabConf struct {

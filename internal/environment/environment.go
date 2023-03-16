@@ -8,13 +8,15 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	wgproto "github.com/aau-network-security/gwireguard/proto" //v1.0.3
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	wg "github.com/aau-network-security/haaukins-agent/internal/environment/lab/network/vpn"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
-	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,19 +25,18 @@ var (
 	VPNPortmax = 6000
 )
 
-func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initialLabs int32) (Environment, error) {
+func (ec *EnvConfig) NewEnv(ctx context.Context) (*Environment, error) {
 	// Make worker work
 	guac, err := NewGuac(ctx, ec.Tag)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating new guacamole")
-		return Environment{}, err
+		return nil, err
 	}
 	// Getting wireguard client from config
-	//TODO MAke part of agent initilization
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
-		return Environment{}, err
+		return nil, err
 	}
 
 	ipT := IPTables{
@@ -45,15 +46,18 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 
 	dockerHost := virtual.NewHost()
 
-	var eventVPNIPs []int
+	var eventVPNIPs [][]int
 
 	// TODO Make dynamic based on amount of users on a team
-	ipAddrs := makeRange(2, 254)
+	// Since subnet is x.x.240.1/22
+	// We create 4 arrays of int
+	// This means we cover 240.2-254, 241.2-254, 242.2-254 and 243.2-254
 	for i := 0; i < 4; i++ {
-		eventVPNIPs = append(eventVPNIPs, ipAddrs...)
+		ipAddrs := makeRange(2, 254)
+		eventVPNIPs = append(eventVPNIPs, ipAddrs)
 	}
 
-	env := Environment{
+	env := &Environment{
 		M:             &sync.RWMutex{},
 		EnvConfig:     ec,
 		Guac:          guac,
@@ -64,64 +68,6 @@ func (ec *EnvConfig) NewEnv(ctx context.Context, newLabs chan proto.Lab, initial
 		Dockerhost:    dockerHost,
 		IpT:           ipT,
 		IpRules:       map[string]IpRules{},
-	}
-
-	m := &sync.RWMutex{}
-	// If it is a beginner event, labs will be created and be available beforehand
-	// TODO: add more vms based on amount of users on a team
-	if ec.Type == lab.TypeBeginner {
-		for i := 0; i < int(initialLabs); i++ {
-			// Adding lab creation task to taskqueue
-			ec.WorkerPool.AddTask(func() {
-				ctx := context.Background()
-				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when starting worker")
-				// Make sure that environment is still running before creating lab
-				if ec.Status == StatusClosing || ec.Status == StatusClosed {
-					log.Info().Msg("environment closed before newlab task was taken from queue, canceling...")
-					return
-				}
-				// Creating containers and frontends
-				lab, err := ec.LabConf.NewLab(ctx, false, lab.TypeBeginner, ec.Tag)
-				if err != nil {
-					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error creating new lab")
-					return
-				}
-				// Starting the created containers and frontends
-				if err := lab.Start(ctx); err != nil {
-					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
-					return
-				}
-
-				if err := env.CreateGuacConn(lab); err != nil {
-					log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
-				}
-
-				log.Debug().Uint8("envStatus", uint8(ec.Status)).Msg("environment status when ending worker")
-				// If lab was created while running CloseEnvironment, close the lab
-				if ec.Status == StatusClosing || ec.Status == StatusClosed {
-					log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
-					if err := lab.Close(); err != nil {
-						log.Error().Err(err).Msg("error closing lab")
-						return
-					}
-					return
-				}
-				// Sending lab info to daemon
-				// TODO Figure out what exact data should be returned to daemon
-				// TODO use new getChallenges function to get challenges for lab to return flag etc.
-				newLab := proto.Lab{
-					Tag:      lab.Tag,
-					EventTag: ec.Tag,
-					IsVPN:    false,
-				}
-				newLabs <- newLab
-				// Adding lab to environment
-				m.Lock()
-				env.Labs[lab.Tag] = &lab
-				m.Unlock()
-
-			})
-		}
 	}
 
 	return env, nil
@@ -147,7 +93,7 @@ func (env *Environment) Start(ctx context.Context) error {
 
 	// Initializing wireguard for the port
 	log.Info().Int("port", port).Msg("initializing VPN endpoinrt on port")
-	_, err := env.Wg.InitializeI(context.Background(), &wg.IReq{
+	_, err := env.Wg.InitializeI(context.Background(), &wgproto.IReq{
 		Address:    env.EnvConfig.VPNAddress,
 		ListenPort: uint32(port),
 		SaveConfig: true,
@@ -161,6 +107,56 @@ func (env *Environment) Start(ctx context.Context) error {
 	}
 
 	env.EnvConfig.Status = StatusRunning
+	return nil
+}
+
+func (env *Environment) RemoveVpnLabPeers(ctx context.Context, labTag string) error {
+	env.M.Lock()
+	defer env.M.Unlock()
+
+	log.Debug().Msgf("removing ip table rules for lab: %s", labTag)
+	labIpRules, ok := env.IpRules[labTag]
+	if !ok {
+		log.Error().Msg("error removing VPN peers for lab")
+	}
+	env.IpT.RemoveRejectRule(labIpRules.Labsubnet)
+	env.IpT.RemoveStateRule(labIpRules.Labsubnet)
+	env.IpT.RemoveAcceptRule(labIpRules.Labsubnet, labIpRules.VpnIps)
+	delete(env.IpRules, labTag)
+
+	log.Debug().Msgf("removing wg peers for lab: %s", labTag)
+	vpnIps := strings.Split(labIpRules.VpnIps, ",")
+	// Subnet is the last ip and we only want to remove the peers
+	for i := 0; i < len(vpnIps)-1; i++ {
+		ipBytes := strings.Split(vpnIps[i], ".")
+		lastByteStr := strings.Split(ipBytes[3], "/")[0]
+		log.Debug().Msgf("ipBytes: %v", ipBytes)
+		pubKeyResp, err := env.Wg.GetPublicKey(ctx, &wgproto.PubKeyReq{PubKeyName: env.EnvConfig.Tag + "_" + labTag + "_" + lastByteStr})
+		if err != nil {
+			log.Error().Err(err).Msgf("error getting public key for lab: %s", labTag)
+			return err
+		}
+		wgReq := wgproto.DelPReq{
+			Nic:           env.EnvConfig.Tag,
+			PeerPublicKey: pubKeyResp.Message,
+		}
+		resp, err := env.Wg.DelPeer(ctx, &wgReq)
+		if err != nil {
+			log.Error().Err(err).Msgf("error deleting peer in wireguard for lab: %s", labTag)
+			return err
+		}
+		if resp != nil {
+			log.Debug().Str("response", resp.Message).Msgf("resp from wg when deleting peer for lab: %s", labTag)
+		}
+		// Index byte is determined by the second last byte of the ip - 240
+		indexByte, _ := strconv.Atoi(ipBytes[2])
+		lastByte, _ := strconv.Atoi(lastByteStr)
+		env.IpAddrs[indexByte-240] = append(env.IpAddrs[indexByte-240], lastByte)
+	}
+	if err := removeVPNConfigs(env.EnvConfig.VpnConfig.Dir + "/" + env.EnvConfig.Tag + "_" + labTag + "*"); err != nil {
+		log.Error().Err(err).Msgf("Error happened on deleting VPN configuration files for lab %s", labTag)
+	}
+
 	return nil
 }
 
@@ -190,9 +186,9 @@ func (env *Environment) Close() error {
 func (env *Environment) removeIPTableRules() {
 	for tid, ipR := range env.IpRules {
 		log.Debug().Str("Team ID ", tid).Msgf("iptables are removing... ")
-		env.IpT.removeRejectRule(ipR.Labsubnet)
-		env.IpT.removeStateRule(ipR.Labsubnet)
-		env.IpT.removeAcceptRule(ipR.Labsubnet, ipR.VpnIps)
+		env.IpT.RemoveRejectRule(ipR.Labsubnet)
+		env.IpT.RemoveStateRule(ipR.Labsubnet)
+		env.IpT.RemoveAcceptRule(ipR.Labsubnet, ipR.VpnIps)
 	}
 }
 
@@ -200,7 +196,7 @@ func (env *Environment) removeVPNConfs() {
 	envTag := env.EnvConfig.Tag
 	log.Debug().Msgf("Closing VPN connection for event %s", envTag)
 
-	resp, err := env.Wg.ManageNIC(context.Background(), &wg.ManageNICReq{Cmd: "down", Nic: envTag})
+	resp, err := env.Wg.ManageNIC(context.Background(), &wgproto.ManageNICReq{Cmd: "down", Nic: envTag})
 	if err != nil {
 		log.Error().Err(err).Msgf("Error when disabling VPN connection for event %s", envTag)
 		return

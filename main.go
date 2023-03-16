@@ -36,7 +36,8 @@ func main() {
 		return
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
+	listenAddress := fmt.Sprintf("%s:%d", c.ListeningIp, c.GrpcPort)
+	lis, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		log.Fatal().Msgf("failed to listen: %v", err)
 	}

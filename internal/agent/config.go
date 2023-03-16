@@ -8,6 +8,7 @@ type Config struct {
 	Host               string                           `yaml:"host"`
 	GrpcPort           uint                             `yaml:"grpcPort"`
 	ProxyPort          uint                             `yaml:"proxyPort"`
+	ListeningIp        string                           `yaml:"listening-ip,omitempty"`
 	AuthKey            string                           `yaml:"auth-key"`
 	SignKey            string                           `yaml:"sign-key"`
 	MaxWorkers         int                              `yaml:"max-workers"`

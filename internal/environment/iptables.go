@@ -59,7 +59,7 @@ type Errori struct {
 }
 
 // iptables --insert DOCKER-USER -s 77.179.248.0/24 -j REJECT --reject-with icmp-port-unreachable
-func (ipTab *IPTables) createRejectRule(labSubnet string) error {
+func (ipTab *IPTables) CreateRejectRule(labSubnet string) error {
 	log.Debug().Msgf("Reject icmp connection on containers for lab %s", labSubnet)
 	cmds := []string{string(insertA), "DOCKER-USER", "-s", labSubnet, "-j", string(rejectP), "--reject-with", "icmp-port-unreachable"}
 	_, err := ipTab.execute(cmds...)
@@ -67,7 +67,7 @@ func (ipTab *IPTables) createRejectRule(labSubnet string) error {
 }
 
 // sudo iptables --insert DOCKER-USER -s 77.218.127.0/24 -m state --state RELATED,ESTABLISHED -j RETURN
-func (ipTab *IPTables) createStateRule(labSubnet string) error {
+func (ipTab *IPTables) CreateStateRule(labSubnet string) error {
 	cmds := []string{string(insertA), "DOCKER-USER", "-s", labSubnet, "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", string(returnP)}
 	log.Debug().Strs("STATE RULE", cmds).Msgf("Creating Iptables State Rule for VPN Connection")
 	_, err := ipTab.execute(cmds...)
@@ -75,26 +75,26 @@ func (ipTab *IPTables) createStateRule(labSubnet string) error {
 }
 
 // iptables --insert DOCKER-USER -s 77.179.248.0/24 -d 25.136.240.250/32,25.136.241.249/32,25.136.242.248/32,25.136.243.247/32,77.179.248.0/24 -j ACCEPT
-func (ipTab *IPTables) createAcceptRule(labSubnet string, vpnIPs string) error {
+func (ipTab *IPTables) CreateAcceptRule(labSubnet string, vpnIPs string) error {
 	cmds := []string{string(insertA), "DOCKER-USER", "-s", labSubnet, "-d", vpnIPs, "-j", string(acceptP)}
 	_, err := ipTab.execute(cmds...)
 	return err
 }
 
-func (ipTab *IPTables) removeAcceptRule(labSubnet string, vpnIps string) error {
+func (ipTab *IPTables) RemoveAcceptRule(labSubnet string, vpnIps string) error {
 	cmds := []string{string(deleteA), "DOCKER-USER", "-s", labSubnet, "-d", vpnIps, "-j", string(acceptP)}
 	log.Debug().Strs("ACCEPT RULE", cmds).Msgf("Removing Iptables Accept Rule for VPN Connection")
 	_, err := ipTab.execute(cmds...)
 	return err
 }
-func (ipTab *IPTables) removeStateRule(labSubnet string) error {
+func (ipTab *IPTables) RemoveStateRule(labSubnet string) error {
 	cmds := []string{string(deleteA), "DOCKER-USER", "-s", labSubnet, "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", string(returnP)}
 	log.Debug().Strs("STATE RULE", cmds).Msgf("Removing Iptables State Rule for VPN Connection")
 	_, err := ipTab.execute(cmds...)
 	return err
 }
 
-func (ipTab *IPTables) removeRejectRule(labSubnet string) error {
+func (ipTab *IPTables) RemoveRejectRule(labSubnet string) error {
 	cmds := []string{string(deleteA), "DOCKER-USER", "-s", labSubnet, "-j", string(rejectP), "--reject-with", "icmp-port-unreachable"}
 	log.Debug().Strs("Reject RULE", cmds).Msgf("Removing Iptables Reject Rule for VPN Connection")
 	_, err := ipTab.execute(cmds...)

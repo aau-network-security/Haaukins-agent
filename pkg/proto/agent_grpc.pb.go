@@ -26,6 +26,7 @@ type AgentClient interface {
 	CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CloseEnvironment(ctx context.Context, in *CloseEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	CreateVpnConfForLab(ctx context.Context, in *CreateVpnConfRequest, opts ...grpc.CallOption) (*CreateVpnConfResponse, error)
 	CloseLab(ctx context.Context, in *CloseLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	AddExercisesToEnv(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	AddExercisesToLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
@@ -33,7 +34,10 @@ type AgentClient interface {
 	StartExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	StopExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error)
+	MonitorStream(ctx context.Context, opts ...grpc.CallOption) (Agent_MonitorStreamClient, error)
+	GetLab(ctx context.Context, in *GetLabRequest, opts ...grpc.CallOption) (*GetLabResponse, error)
+	GetHostsInLab(ctx context.Context, in *GetHostsRequest, opts ...grpc.CallOption) (*GetHostsResponse, error)
+	ResetVmInLab(ctx context.Context, in *VmRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 }
 
 type agentClient struct {
@@ -74,6 +78,15 @@ func (c *agentClient) CloseEnvironment(ctx context.Context, in *CloseEnvRequest,
 func (c *agentClient) CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/CreateLabForEnv", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) CreateVpnConfForLab(ctx context.Context, in *CreateVpnConfRequest, opts ...grpc.CallOption) (*CreateVpnConfResponse, error) {
+	out := new(CreateVpnConfResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/CreateVpnConfForLab", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -143,36 +156,62 @@ func (c *agentClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *agentClient) LabStream(ctx context.Context, in *Empty, opts ...grpc.CallOption) (Agent_LabStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Agent_ServiceDesc.Streams[0], "/agent.Agent/LabStream", opts...)
+func (c *agentClient) MonitorStream(ctx context.Context, opts ...grpc.CallOption) (Agent_MonitorStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Agent_ServiceDesc.Streams[0], "/agent.Agent/MonitorStream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &agentLabStreamClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+	x := &agentMonitorStreamClient{stream}
 	return x, nil
 }
 
-type Agent_LabStreamClient interface {
-	Recv() (*Lab, error)
+type Agent_MonitorStreamClient interface {
+	Send(*PingRequest) error
+	Recv() (*MonitorResponse, error)
 	grpc.ClientStream
 }
 
-type agentLabStreamClient struct {
+type agentMonitorStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *agentLabStreamClient) Recv() (*Lab, error) {
-	m := new(Lab)
+func (x *agentMonitorStreamClient) Send(m *PingRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *agentMonitorStreamClient) Recv() (*MonitorResponse, error) {
+	m := new(MonitorResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *agentClient) GetLab(ctx context.Context, in *GetLabRequest, opts ...grpc.CallOption) (*GetLabResponse, error) {
+	out := new(GetLabResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/GetLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) GetHostsInLab(ctx context.Context, in *GetHostsRequest, opts ...grpc.CallOption) (*GetHostsResponse, error) {
+	out := new(GetHostsResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/GetHostsInLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) ResetVmInLab(ctx context.Context, in *VmRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/ResetVmInLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // AgentServer is the server API for Agent service.
@@ -183,6 +222,7 @@ type AgentServer interface {
 	CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error)
 	CloseEnvironment(context.Context, *CloseEnvRequest) (*StatusResponse, error)
 	CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error)
+	CreateVpnConfForLab(context.Context, *CreateVpnConfRequest) (*CreateVpnConfResponse, error)
 	CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error)
 	AddExercisesToEnv(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	AddExercisesToLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
@@ -190,7 +230,10 @@ type AgentServer interface {
 	StartExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	LabStream(*Empty, Agent_LabStreamServer) error
+	MonitorStream(Agent_MonitorStreamServer) error
+	GetLab(context.Context, *GetLabRequest) (*GetLabResponse, error)
+	GetHostsInLab(context.Context, *GetHostsRequest) (*GetHostsResponse, error)
+	ResetVmInLab(context.Context, *VmRequest) (*StatusResponse, error)
 	mustEmbedUnimplementedAgentServer()
 }
 
@@ -209,6 +252,9 @@ func (UnimplementedAgentServer) CloseEnvironment(context.Context, *CloseEnvReque
 }
 func (UnimplementedAgentServer) CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateLabForEnv not implemented")
+}
+func (UnimplementedAgentServer) CreateVpnConfForLab(context.Context, *CreateVpnConfRequest) (*CreateVpnConfResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateVpnConfForLab not implemented")
 }
 func (UnimplementedAgentServer) CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseLab not implemented")
@@ -231,8 +277,17 @@ func (UnimplementedAgentServer) StopExerciseInLab(context.Context, *ExerciseRequ
 func (UnimplementedAgentServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedAgentServer) LabStream(*Empty, Agent_LabStreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method LabStream not implemented")
+func (UnimplementedAgentServer) MonitorStream(Agent_MonitorStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method MonitorStream not implemented")
+}
+func (UnimplementedAgentServer) GetLab(context.Context, *GetLabRequest) (*GetLabResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLab not implemented")
+}
+func (UnimplementedAgentServer) GetHostsInLab(context.Context, *GetHostsRequest) (*GetHostsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHostsInLab not implemented")
+}
+func (UnimplementedAgentServer) ResetVmInLab(context.Context, *VmRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetVmInLab not implemented")
 }
 func (UnimplementedAgentServer) mustEmbedUnimplementedAgentServer() {}
 
@@ -315,6 +370,24 @@ func _Agent_CreateLabForEnv_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentServer).CreateLabForEnv(ctx, req.(*CreateLabRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_CreateVpnConfForLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateVpnConfRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).CreateVpnConfForLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/CreateVpnConfForLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).CreateVpnConfForLab(ctx, req.(*CreateVpnConfRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -445,25 +518,84 @@ func _Agent_Ping_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Agent_LabStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(AgentServer).LabStream(m, &agentLabStreamServer{stream})
+func _Agent_MonitorStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AgentServer).MonitorStream(&agentMonitorStreamServer{stream})
 }
 
-type Agent_LabStreamServer interface {
-	Send(*Lab) error
+type Agent_MonitorStreamServer interface {
+	Send(*MonitorResponse) error
+	Recv() (*PingRequest, error)
 	grpc.ServerStream
 }
 
-type agentLabStreamServer struct {
+type agentMonitorStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *agentLabStreamServer) Send(m *Lab) error {
+func (x *agentMonitorStreamServer) Send(m *MonitorResponse) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func (x *agentMonitorStreamServer) Recv() (*PingRequest, error) {
+	m := new(PingRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Agent_GetLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLabRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).GetLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/GetLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).GetLab(ctx, req.(*GetLabRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_GetHostsInLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHostsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).GetHostsInLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/GetHostsInLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).GetHostsInLab(ctx, req.(*GetHostsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_ResetVmInLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VmRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ResetVmInLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/ResetVmInLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ResetVmInLab(ctx, req.(*VmRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 // Agent_ServiceDesc is the grpc.ServiceDesc for Agent service.
@@ -488,6 +620,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateLabForEnv",
 			Handler:    _Agent_CreateLabForEnv_Handler,
+		},
+		{
+			MethodName: "CreateVpnConfForLab",
+			Handler:    _Agent_CreateVpnConfForLab_Handler,
 		},
 		{
 			MethodName: "CloseLab",
@@ -517,12 +653,25 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Ping",
 			Handler:    _Agent_Ping_Handler,
 		},
+		{
+			MethodName: "GetLab",
+			Handler:    _Agent_GetLab_Handler,
+		},
+		{
+			MethodName: "GetHostsInLab",
+			Handler:    _Agent_GetHostsInLab_Handler,
+		},
+		{
+			MethodName: "ResetVmInLab",
+			Handler:    _Agent_ResetVmInLab_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "LabStream",
-			Handler:       _Agent_LabStream_Handler,
+			StreamName:    "MonitorStream",
+			Handler:       _Agent_MonitorStream_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "agent.proto",

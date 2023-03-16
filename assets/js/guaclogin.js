@@ -30,5 +30,10 @@ fetch("/guacamole/api/tokens" , {
     localStorage.removeItem('GUAC_HISTORY');
     localStorage.removeItem('GUAC_PREFERENCES')
     console.log("Sending to vm with id: " + vid);
-    window.location.replace("/guacamole/#/client/" + vid);
+    if (vid == null) {
+        window.location.replace("/guacamole/#");
+    } else {
+        window.location.replace("/guacamole/#/client/" + vid);
+    }
+    
 })

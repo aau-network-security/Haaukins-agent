@@ -8,6 +8,7 @@ service Agent {
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
     rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
+    rpc CreateVpnConfForLab(CreateVpnConfRequest) returns (CreateVpnConfResponse) {}
     rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
     rpc AddExercisesToEnv (ExerciseRequest) returns (StatusResponse) {}
     rpc AddExercisesToLab(ExerciseRequest) returns (StatusResponse) {}
@@ -15,10 +16,51 @@ service Agent {
     rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc Ping (PingRequest) returns (PingResponse) {}
-    rpc LabStream(Empty) returns (stream Lab) {}
+    rpc MonitorStream(stream PingRequest) returns (stream MonitorResponse) {}
+    rpc GetLab (GetLabRequest) returns (GetLabResponse) {}
+    rpc GetHostsInLab (GetHostsRequest) returns (GetHostsResponse) {}
+    rpc ResetVmInLab (VmRequest) returns (StatusResponse) {}
 }
 
 message Empty{}
+
+message VmRequest {
+    string labTag = 1;
+    string connectionIdentifier = 2;
+}
+
+message GetLabRequest {
+    string labTag = 1;
+}
+
+message GetLabResponse {
+    Lab lab = 1;
+}
+
+message GetHostsRequest {
+    string labTag = 1;
+}
+
+message GetHostsResponse {
+    repeated string hosts = 1;
+}
+
+message MonitorResponse {
+    string hb = 1;
+    repeated Lab newLabs = 2;
+    Resources resources = 3;
+    uint32 queuedTasks = 4;
+}
+
+message Resources {
+    uint64 memAvailable = 1;
+    double cpu = 2;
+    double memPercentUsed = 3;
+    uint32 labCount = 4;
+    uint32 vmCount = 5;
+    uint32 containerCount = 6;
+    uint64 memInstalled = 7;
+}
 
 message InitRequest {
     string url = 1;
@@ -33,6 +75,7 @@ message PingRequest {
 
 message PingResponse {
     string pong = 1;
+    uint64 memInstalled = 2;
 }
 
 message CreatEnvRequest {
@@ -51,6 +94,14 @@ message CloseEnvRequest {
 message CreateLabRequest{
     string eventTag = 1;
     bool isVPN = 2;
+}
+
+message CreateVpnConfRequest {
+    string labTag = 1;
+}
+
+message CreateVpnConfResponse {
+    repeated string configs = 1;
 }
 
 message CloseLabRequest {
@@ -78,12 +129,31 @@ message Lab {
     string tag = 1;
     string eventTag = 2;
     repeated Exercise exercises = 3;
-    uint32 guacPort = 4;
-    bool isVPN = 5;
+    bool isVPN = 4;
+    GuacCreds guacCreds = 5;
+    repeated string vpnConfs = 6;
 }
 
 message Exercise {
     string tag = 1;
-    repeated string flags = 2;
-    repeated string errors = 3;
+    repeated ChildExercise childExercises = 2;
+    repeated Machine machines = 3;
+}
+
+message ChildExercise {
+    string tag = 1;
+    string flag = 2;
+}
+
+message Machine {
+    string id = 1;
+    string status = 2;
+    string image = 3;
+    repeated string errors = 4;
+    string type = 5;
+}
+
+message GuacCreds {
+    string username = 1;
+    string password = 2;
 }

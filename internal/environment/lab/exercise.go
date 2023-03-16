@@ -8,8 +8,10 @@ import (
 	"sync"
 
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/exp/slices"
 )
 
 // AddExercises uses exercise configs from the exercise service to configure containers and flags to be started at a later time
@@ -74,17 +76,25 @@ func (l *Lab) AddAndStartExercises(ctx context.Context, exerConfs ...exercise.Ex
 		return err
 	}
 
+	newExTags := []string{}
+	for _, exerConf := range exerConfs {
+		newExTags = append(newExTags, exerConf.Tag)
+	}
+
 	// Start the exercises
 	var res error
 	var wg sync.WaitGroup
 	for _, ex := range l.Exercises {
-		wg.Add(1)
-		go func(e *exercise.Exercise) {
-			if err := e.Start(ctx); err != nil {
-				res = multierror.Append(res, err)
-			}
-			wg.Done()
-		}(ex)
+		if slices.Contains(newExTags, ex.Tag) {
+			wg.Add(1)
+			go func(e *exercise.Exercise) {
+				if err := e.Start(ctx); err != nil {
+					res = multierror.Append(res, err)
+				}
+				wg.Done()
+			}(ex)
+		}
+
 	}
 	wg.Wait()
 	if res != nil {
@@ -130,10 +140,37 @@ func (l *Lab) ResetExercise(ctx context.Context, exTag string) error {
 	return nil
 }
 
-func (l *Lab) GetChallenges() []exercise.Challenge {
-	var challenges []exercise.Challenge
+// Returns all exercises currently in lab to be sent to the daemon
+func (l *Lab) GetExercisesInfo() []*proto.Exercise {
+	var exercises []*proto.Exercise
 	for _, e := range l.Exercises {
-		challenges = append(challenges, e.GetChallenges()...)
+		var machines []*proto.Machine
+		for _, m := range e.Machines {
+			machine := &proto.Machine{
+				Id:     m.Info().Id,
+				Status: m.Info().State.String(),
+				Type:   m.Info().Type,
+				Image:  m.Info().Image,
+			}
+			machines = append(machines, machine)
+		}
+
+		childExercises := e.GetChildExercises()
+		var protoChildExercises []*proto.ChildExercise
+		for _, childExercise := range childExercises {
+			protoChildExercise := &proto.ChildExercise{
+				Tag:  childExercise.Tag,
+				Flag: childExercise.Value,
+			}
+			protoChildExercises = append(protoChildExercises, protoChildExercise)
+		}
+
+		exercise := &proto.Exercise{
+			Tag:            e.Tag,
+			ChildExercises: protoChildExercises,
+			Machines:       machines,
+		}
+		exercises = append(exercises, exercise)
 	}
-	return challenges
+	return exercises
 }

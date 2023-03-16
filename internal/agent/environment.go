@@ -28,7 +28,6 @@ var (
 // Environments can be advanced or beginner environments.
 // Advanced environments is geared towards regular CTFs where as beginner environments can be used for
 // beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
-// TODO Check if environment exists, figure out what the logic should be.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
 	if !a.initialized {
@@ -46,6 +45,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.Tag = req.EventTag
 	envConf.Type = lab.LabType(req.EnvType)
 	envConf.WorkerPool = a.workerPool
+	envConf.TeamSize = int(req.TeamSize)
 	log.Debug().Str("envtype", envConf.Type.String()).Msg("making environment with type")
 	// Get exercise info from exercise db
 
@@ -100,16 +100,83 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 
 	// Create environment
-	env, err := envConf.NewEnv(ctx, a.newLabs, req.InitialLabs)
+	env, err := envConf.NewEnv(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating environment")
 		return &proto.StatusResponse{Message: "Error creating environment"}, err
 	}
 
+	m := &sync.RWMutex{}
+	// If it is a beginner event, labs will be created and be available beforehand
+	if envConf.Type == lab.TypeBeginner {
+		for i := 0; i < int(req.InitialLabs); i++ {
+			// Adding lab creation task to taskqueue
+			envConf.WorkerPool.AddTask(func() {
+				ctx := context.Background()
+				log.Debug().Uint8("envStatus", uint8(envConf.Status)).Msg("environment status when starting worker")
+				// Make sure that environment is still running before creating lab
+				if envConf.Status == environment.StatusClosing || envConf.Status == environment.StatusClosed {
+					log.Info().Msg("environment closed before newlab task was taken from queue, canceling...")
+					return
+				}
+				// Creating containers and frontends
+				lab, err := envConf.LabConf.NewLab(ctx, false, lab.TypeBeginner, envConf.Tag)
+				if err != nil {
+					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error creating new lab")
+					return
+				}
+				// Starting the created containers and frontends
+				if err := lab.Start(ctx); err != nil {
+					log.Error().Err(err).Str("eventTag", env.EnvConfig.Tag).Msg("error starting new lab")
+					return
+				}
+
+				if err := env.CreateGuacConn(lab); err != nil {
+					log.Error().Err(err).Str("labTag", lab.Tag).Msg("error creating guac connection for lab")
+				}
+
+				log.Debug().Uint8("envStatus", uint8(envConf.Status)).Msg("environment status when ending worker")
+				// If lab was created while running CloseEnvironment, close the lab
+				if envConf.Status == environment.StatusClosing || envConf.Status == environment.StatusClosed {
+					log.Info().Msg("environment closed while newlab task was running from queue, closing lab...")
+					if err := lab.Close(); err != nil {
+						log.Error().Err(err).Msg("error closing lab")
+						return
+					}
+					return
+				}
+				// Sending lab info to daemon
+				// TODO Figure out what exact data should be returned to daemon
+				// TODO use new getChallenges function to get challenges for lab to return flag etc.
+
+				newLab := proto.Lab{
+					Tag:       lab.Tag,
+					EventTag:  envConf.Tag,
+					Exercises: lab.GetExercisesInfo(),
+					IsVPN:     false,
+					GuacCreds: &proto.GuacCreds{
+						Username: lab.GuacUsername,
+						Password: lab.GuacPassword,
+					},
+				}
+				//a.newLabs = append(a.newLabs, newLab)
+				a.newLabs <- newLab
+				// Adding lab to environment
+				m.Lock()
+				env.Labs[lab.Tag] = &lab
+				m.Unlock()
+
+				if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+					log.Error().Err(err).Msg("error saving state")
+				}
+			})
+		}
+	}
+
 	// Start the environment
 	go env.Start(context.TODO())
 
-	a.EnvPool.AddEnv(&env)
+	a.EnvPool.AddEnv(env)
 	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 		log.Error().Err(err).Msg("error saving state")
 	}
