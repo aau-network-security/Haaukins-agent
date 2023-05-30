@@ -13,12 +13,6 @@ file-transfer-root: /path/to/desired/filetransfer/root
 ova-dir: /path/to/desired/ova/directory
 state-path: /path/to/desired/state/directory
 
-exercise-service:
-  grpc: "localhost:port"
-  auth-key: dev-auth-key
-  sign-key: dev-sign-key
-  tls-enabled: false
-
 vpn-service:
   endpoint: vpn.localhost
   port: 5353

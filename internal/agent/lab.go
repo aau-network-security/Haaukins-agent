@@ -14,7 +14,6 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
 	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
-	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -228,15 +227,15 @@ func (a *Agent) ResetVmInLab(ctx context.Context, req *proto.VmRequest) (*proto.
 			log.Error().Err(err).Msg("error getting port from connection identifier")
 			return nil, err
 		}
-	
+
 		portInt, _ := strconv.Atoi(portStr)
-	
+
 		log.Debug().Str("port", portStr).Msg("response from GetPortFromConnectionIdentifier")
-		
+
 		// Checking the lab for frontends with the requested port
 		// This is to only allow a team to reset a vm within their own lab
 		// since the connectionIdentifier is untrusted input
-		
+
 		l.M.Lock()
 		defer l.M.Unlock()
 		if frontend, ok := l.Frontends[uint(portInt)]; ok {
@@ -246,7 +245,7 @@ func (a *Agent) ResetVmInLab(ctx context.Context, req *proto.VmRequest) (*proto.
 				return nil, err
 			}
 			return &proto.StatusResponse{Message: "OK"}, nil
-		} 
+		}
 
 		return nil, errors.New("frontend with that connection identifier not found in lab")
 	} else {
@@ -259,7 +258,7 @@ func (a *Agent) ResetVmInLab(ctx context.Context, req *proto.VmRequest) (*proto.
 			}
 		}
 		return &proto.StatusResponse{Message: "OK"}, nil
-	}	
+	}
 }
 
 // Shuts down and removes all frontends and containers related to specific lab. Then removes it from the environment's lab map.
@@ -312,15 +311,9 @@ func (a *Agent) AddExercisesToLab(ctx context.Context, req *proto.ExerciseReques
 		return nil, errors.New("cannot add arbitrary exercise to lab of type beginner")
 	}
 
-	var exerConfs []exercise.ExerciseConfig
-	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
-	if err != nil {
-		log.Error().Err(err).Msg("error getting exercise by tags")
-		return nil, fmt.Errorf("error getting exercises: %s", err)
-	}
-
 	// Unpack into exercise slice
-	for _, e := range exerDbConfs.Exercises {
+	var exerConfs []exercise.ExerciseConfig
+	for _, e := range req.ExerciseConfigs {
 		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err

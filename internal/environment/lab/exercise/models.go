@@ -22,15 +22,10 @@ type Exercise struct {
 
 type ExerciseConfig struct {
 	Tag      string `json:"tag,omitempty"`
-	Name     string `json:"name,omitempty"`
-	Category string `json:"category,omitempty"`
-	Secret   bool   `json:"secret,omitempty"`
 	// specifies whether challenge will be on docker/vm or none
 	// true: none , false: docker/vm
 	Static         bool                     `json:"static,omitempty"`
 	Instance       []ExerciseInstanceConfig `json:"instance,omitempty"`
-	Status         int                      `json:"status,omitempty"`
-	OrgDescription string                   `json:"organizerDescription,omitempty"`
 }
 
 type ExerciseInstanceConfig struct {
@@ -53,12 +48,6 @@ type ChildrenChalConfig struct {
 	Name            string   `json:"name,omitempty"`
 	EnvVar          string   `json:"envFlag,omitempty"`
 	StaticFlag      string   `json:"static,omitempty"`
-	Points          uint     `json:"points,omitempty"`
-	Category        string   `json:"category,omitempty"`
-	TeamDescription string   `json:"teamDescription,omitempty"`
-	PreRequisites   []string `json:"prerequisite,omitempty"`
-	Outcomes        []string `json:"outcome,omitempty"`
-	StaticChallenge bool     `json:"staticChallenge,omitempty"`
 }
 
 type EnvVarConfig struct {

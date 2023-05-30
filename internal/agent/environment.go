@@ -16,7 +16,6 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
-	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -30,9 +29,6 @@ var (
 // beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
-	if !a.initialized {
-		return nil, errors.New("agent not yet initialized")
-	}
 	log.Debug().Msgf("got createEnv request: %v", req)
 
 	if a.EnvPool.DoesEnvExist(req.EventTag) {
@@ -47,15 +43,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.WorkerPool = a.workerPool
 	envConf.TeamSize = int(req.TeamSize)
 	log.Debug().Str("envtype", envConf.Type.String()).Msg("making environment with type")
-	// Get exercise info from exercise db
 
-	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
-	if err != nil {
-		return nil, fmt.Errorf("error getting exercises: %s", err)
-	}
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
-	for _, e := range exerDbConfs.Exercises {
+	for _, e := range req.ExerciseConfigs {
 		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err
@@ -234,13 +225,9 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 	env.M.Lock()
 	defer env.M.Unlock()
 
-	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
-	if err != nil {
-		return nil, fmt.Errorf("error getting exercises: %s", err)
-	}
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
-	for _, e := range exerDbConfs.Exercises {
+	for _, e := range req.ExerciseConfigs {
 		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err
