@@ -183,7 +183,7 @@ message EnvVarConfig {
 message ChildrenChalConfig {
     string tag = 1;
     string name = 2;
-    string env_flag = 3;
+    string envFlag = 3;
     string static = 4;
 }
 
