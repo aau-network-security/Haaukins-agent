@@ -4,7 +4,6 @@ option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 
 //TODO add CreateLabsForEnv function
 service Agent {
-    rpc Init(InitRequest) returns (StatusResponse) {}
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
     rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
@@ -60,13 +59,6 @@ message Resources {
     uint32 vmCount = 5;
     uint32 containerCount = 6;
     uint64 memInstalled = 7;
-}
-
-message InitRequest {
-    string url = 1;
-    string authKey = 2;
-    string signKey = 3;
-    bool tlsEnabled = 4;
 }
 
 message PingRequest {
