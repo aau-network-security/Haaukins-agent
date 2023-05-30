@@ -214,6 +214,7 @@ func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 				// flag is not static
 				value = NewFlag().String()
 				if flag.EnvVar != "" {
+					log.Debug().Str("envVar", flag.EnvVar).Msg("got env var for dynamic flag")
 					envVars[flag.EnvVar] = value
 				}
 			}

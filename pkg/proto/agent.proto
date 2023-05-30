@@ -85,6 +85,7 @@ message CreatEnvRequest {
     int32 initialLabs = 4;
     repeated string exercises = 5;
     int32 teamSize = 6;
+    repeated ExerciseConfig exerciseConfigs = 7;
 }
 
 message CloseEnvRequest {
@@ -113,6 +114,7 @@ message ExerciseRequest {
     string envTag = 2;
     repeated string exercises = 3;
     string exercise = 4;
+    repeated ExerciseConfig exerciseConfigs = 5;
 }
 
 message VmConfig {
@@ -156,4 +158,37 @@ message Machine {
 message GuacCreds {
     string username = 1;
     string password = 2;
+}
+
+message ExerciseConfig {
+    string tag = 1;
+    bool static = 2;
+    repeated ExerciseInstanceConfig instance = 3;
+}
+
+message ExerciseInstanceConfig {
+    string image = 1;
+    uint32 memory = 2;
+    float cpu = 3;
+    repeated EnvVarConfig envs = 4;
+    repeated ChildrenChalConfig children = 5;
+    repeated RecordConfig records = 6;
+}
+
+message EnvVarConfig {
+    string name = 1;
+    string value = 2;
+}
+
+message ChildrenChalConfig {
+    string tag = 1;
+    string name = 2;
+    string env_flag = 3;
+    string static = 4;
+}
+
+message RecordConfig {
+    string type = 1;
+    string name = 2;
+    string data = 3;
 }
