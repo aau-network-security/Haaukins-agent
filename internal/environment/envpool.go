@@ -88,12 +88,12 @@ func (ep *EnvPool) LockForFunc(function func()) {
 	function()
 }
 
-func (ep *EnvPool) GetEnvList() (envList []string) {
+func (ep *EnvPool) GetEnvList() (envList map[string]bool) {
 	ep.M.RLock()
 	defer ep.M.RUnlock()
-
+	envList = make(map[string]bool)
 	for eventTag := range ep.Envs {
-		envList = append(envList, eventTag)
+		envList[eventTag] = true
 	}
 	return
 }

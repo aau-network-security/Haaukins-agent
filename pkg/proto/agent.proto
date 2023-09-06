@@ -86,7 +86,7 @@ message CloseEnvRequest {
 }
 
 message ListEnvResponse {
-    repeated string eventTags = 1;
+    map<string, bool> eventTags = 1;
     map<string, bool> startingEventTags = 2;
     map<string, bool> closingEventTags = 3;
 }
