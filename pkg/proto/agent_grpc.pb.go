@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AgentClient interface {
 	CreateEnvironment(ctx context.Context, in *CreatEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CloseEnvironment(ctx context.Context, in *CloseEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	ListEnvironments(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListEnvResponse, error)
 	CreateLabForEnv(ctx context.Context, in *CreateLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	CreateVpnConfForLab(ctx context.Context, in *CreateVpnConfRequest, opts ...grpc.CallOption) (*CreateVpnConfResponse, error)
 	CloseLab(ctx context.Context, in *CloseLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
@@ -59,6 +60,15 @@ func (c *agentClient) CreateEnvironment(ctx context.Context, in *CreatEnvRequest
 func (c *agentClient) CloseEnvironment(ctx context.Context, in *CloseEnvRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/CloseEnvironment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) ListEnvironments(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListEnvResponse, error) {
+	out := new(ListEnvResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/ListEnvironments", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +220,7 @@ func (c *agentClient) ResetVmInLab(ctx context.Context, in *VmRequest, opts ...g
 type AgentServer interface {
 	CreateEnvironment(context.Context, *CreatEnvRequest) (*StatusResponse, error)
 	CloseEnvironment(context.Context, *CloseEnvRequest) (*StatusResponse, error)
+	ListEnvironments(context.Context, *Empty) (*ListEnvResponse, error)
 	CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error)
 	CreateVpnConfForLab(context.Context, *CreateVpnConfRequest) (*CreateVpnConfResponse, error)
 	CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error)
@@ -235,6 +246,9 @@ func (UnimplementedAgentServer) CreateEnvironment(context.Context, *CreatEnvRequ
 }
 func (UnimplementedAgentServer) CloseEnvironment(context.Context, *CloseEnvRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseEnvironment not implemented")
+}
+func (UnimplementedAgentServer) ListEnvironments(context.Context, *Empty) (*ListEnvResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEnvironments not implemented")
 }
 func (UnimplementedAgentServer) CreateLabForEnv(context.Context, *CreateLabRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateLabForEnv not implemented")
@@ -320,6 +334,24 @@ func _Agent_CloseEnvironment_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentServer).CloseEnvironment(ctx, req.(*CloseEnvRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_ListEnvironments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ListEnvironments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/ListEnvironments",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ListEnvironments(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -580,6 +612,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CloseEnvironment",
 			Handler:    _Agent_CloseEnvironment_Handler,
+		},
+		{
+			MethodName: "ListEnvironments",
+			Handler:    _Agent_ListEnvironments_Handler,
 		},
 		{
 			MethodName: "CreateLabForEnv",

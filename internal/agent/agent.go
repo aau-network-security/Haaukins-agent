@@ -126,14 +126,18 @@ func New(conf *Config) (*Agent, error) {
 	if err != nil {
 		log.Error().Err(err).Msg("error resuming state")
 		envPool = &env.EnvPool{
-			M:    &sync.RWMutex{},
-			Envs: make(map[string]*env.Environment),
+			M:            &sync.RWMutex{},
+			Envs:         make(map[string]*env.Environment),
+			StartingEnvs: make(map[string]bool),
+			ClosingEnvs:  make(map[string]bool),
 		}
 	}
 	if envPool == nil {
 		envPool = &env.EnvPool{
-			M:    &sync.RWMutex{},
-			Envs: make(map[string]*env.Environment),
+			M:            &sync.RWMutex{},
+			Envs:         make(map[string]*env.Environment),
+			StartingEnvs: make(map[string]bool),
+			ClosingEnvs:  make(map[string]bool),
 		}
 	}
 	// Creating agent struct

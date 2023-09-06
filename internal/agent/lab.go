@@ -17,12 +17,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// TODO: Rethink func name as this should be the function that configures a lab for a user
+
 func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest) (*proto.StatusResponse, error) {
-	a.EnvPool.M.RLock()
-	env, ok := a.EnvPool.Envs[req.EventTag]
-	a.EnvPool.M.RUnlock()
-	if !ok {
+	env, err := a.EnvPool.GetEnv(req.EventTag)
+	if err != nil {
 		return nil, errors.New("environment for event does not exist")
 	}
 

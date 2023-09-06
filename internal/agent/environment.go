@@ -29,6 +29,8 @@ var (
 // beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
+	a.EnvPool.AddStartingEnv(req.EventTag)
+	defer a.EnvPool.RemoveStartingEnv(req.EventTag)
 	log.Debug().Msgf("got createEnv request: %v", req)
 
 	if a.EnvPool.DoesEnvExist(req.EventTag) {
@@ -176,6 +178,8 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 
 // Closes environment and attached containers/vms, and removes the environment from the event pool
 func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest) (*proto.StatusResponse, error) {
+	a.EnvPool.AddClosingEnv(req.EventTag)
+	defer a.EnvPool.RemoveClosingEnv(req.EventTag)
 	env, err := a.EnvPool.GetEnv(req.EventTag)
 	if err != nil {
 		log.Error().Str("envTag", req.EventTag).Msg("error finding finding environment with tag")
@@ -264,6 +268,15 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 		log.Error().Err(err).Msg("error saving state")
 	}
 	return &proto.StatusResponse{Message: "OK"}, nil
+}
+
+// Lists currently running, starting and closing environments.
+func (a *Agent) ListEnvironments(ctx context.Context, req *proto.Empty) (*proto.ListEnvResponse, error) {
+	return &proto.ListEnvResponse{
+		EventTags:         a.EnvPool.GetEnvList(),
+		StartingEventTags: a.EnvPool.GetStartingEnvs(),
+		ClosingEventTags:  a.EnvPool.GetClosingEnvs(),
+	}, nil
 }
 
 func getVPNIP() (string, error) {
