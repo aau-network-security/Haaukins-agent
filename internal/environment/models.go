@@ -13,8 +13,11 @@ import (
 
 // General environment types
 type EnvPool struct {
-	M    *sync.RWMutex
-	Envs map[string]*Environment
+	M *sync.RWMutex
+	// Map of environments with eventTag as key
+	Envs         map[string]*Environment
+	StartingEnvs map[string]bool
+	ClosingEnvs  map[string]bool
 }
 
 type Environment struct {

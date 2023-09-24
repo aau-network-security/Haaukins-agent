@@ -64,8 +64,10 @@ func ResumeState(vlib *virtual.VboxLibrary, workerPool worker.WorkerPool, stateP
 	}
 
 	envPool := &environment.EnvPool{
-		M:    &sync.RWMutex{},
-		Envs: make(map[string]*environment.Environment),
+		M:            &sync.RWMutex{},
+		Envs:         make(map[string]*environment.Environment),
+		StartingEnvs: make(map[string]bool),
+		ClosingEnvs:  make(map[string]bool),
 	}
 	for k, envState := range state.Environments {
 		env, err := convertEnvState(envState, vlib, workerPool)
