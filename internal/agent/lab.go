@@ -12,11 +12,11 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/exercise"
+	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	"github.com/rs/zerolog/log"
 )
-
 
 func (a *Agent) CreateLabForEnv(ctx context.Context, req *proto.CreateLabRequest) (*proto.StatusResponse, error) {
 	env, err := a.EnvPool.GetEnv(req.EventTag)
@@ -201,6 +201,74 @@ func (a *Agent) GetHostsInLab(ctx context.Context, req *proto.GetHostsRequest) (
 	hosts := lab.GetDNSRecords(l.DnsRecords)
 
 	return &proto.GetHostsResponse{Hosts: hosts}, nil
+}
+
+// Reset lab resets DHCP, DNS, exercises and frontends in lab
+func (a *Agent) ResetLab(ctx context.Context, req *proto.ResetLabRequest) (*proto.StatusResponse, error) {
+	l, err := a.EnvPool.GetLabByTag(req.LabTag)
+	if err != nil {
+		log.Error().Str("labTag", req.LabTag).Err(err).Msg("error getting lab by tag")
+		return nil, err
+	}
+
+	l.M.Lock()
+	defer l.M.Unlock()
+
+	// Reset the DHCP
+	if err := l.RefreshDHCP(ctx); err != nil {
+		log.Error().Err(err).Str("labTag", req.LabTag).Msg("error resetting DHCP")
+		return nil, err
+	}
+
+	// Reset the DNS
+	if err := l.RefreshDNS(ctx); err != nil {
+		log.Error().Err(err).Str("labTag", req.LabTag).Msg("error resetting DNS")
+		return nil, err
+	}
+
+	// Reset all existing exercises
+	for _, exercise := range l.Exercises {
+		if err := exercise.Reset(ctx); err != nil {
+			log.Error().Err(err).Str("exerciseTag", exercise.Tag).Msg("error resetting exercise")
+			return nil, err
+		}
+	}
+
+	// Stop then start all frontends
+	for _, conf := range l.Frontends {
+		switch conf.Vm.Info().State {
+		case virtual.Running:
+			if err := conf.Vm.Stop(); err != nil {
+				return nil, err
+			}
+			if err := conf.Vm.Start(ctx); err != nil {
+				return nil, err
+			}
+		case virtual.Stopped:
+			if err := conf.Vm.Start(ctx); err != nil {
+				return nil, err
+			}
+		case virtual.Suspended:
+			if err := conf.Vm.Start(ctx); err != nil {
+				return nil, err
+			}
+			if err := conf.Vm.Stop(); err != nil {
+				return nil, err
+			}
+			if err := conf.Vm.Start(ctx); err != nil {
+				return nil, err
+			}
+		case virtual.Error:
+			if err := conf.Vm.Create(ctx); err != nil {
+				return nil, err
+			}
+			if err := conf.Vm.Start(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
 func (a *Agent) ResetVmInLab(ctx context.Context, req *proto.VmRequest) (*proto.StatusResponse, error) {
@@ -396,5 +464,3 @@ func (a *Agent) ResetExerciseInLab(ctx context.Context, req *proto.ExerciseReque
 
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
-
-// TODO Add reset vm call
