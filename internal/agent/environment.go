@@ -30,7 +30,12 @@ var (
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
 	a.EnvPool.AddStartingEnv(req.EventTag)
-	defer a.EnvPool.RemoveStartingEnv(req.EventTag)
+	defer func() {
+		a.EnvPool.RemoveStartingEnv(req.EventTag)
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+	}()
 	log.Debug().Msgf("got createEnv request: %v", req)
 
 	if a.EnvPool.DoesEnvExist(req.EventTag) {
@@ -158,7 +163,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 				m.Lock()
 				env.Labs[lab.Tag] = &lab
 				m.Unlock()
-
+				// Should not be removed as it runs in a worker
 				if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 					log.Error().Err(err).Msg("error saving state")
 				}
@@ -170,16 +175,19 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	go env.Start(context.TODO())
 
 	a.EnvPool.AddEnv(env)
-	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-		log.Error().Err(err).Msg("error saving state")
-	}
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
 }
 
 // Closes environment and attached containers/vms, and removes the environment from the event pool
 func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest) (*proto.StatusResponse, error) {
 	a.EnvPool.AddClosingEnv(req.EventTag)
-	defer a.EnvPool.RemoveClosingEnv(req.EventTag)
+	defer func() {
+		a.EnvPool.RemoveClosingEnv(req.EventTag)
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+	}()
+	
 	env, err := a.EnvPool.GetEnv(req.EventTag)
 	if err != nil {
 		log.Error().Str("envTag", req.EventTag).Msg("error finding finding environment with tag")
@@ -205,9 +213,6 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 	env.EnvConfig.Status = environment.StatusClosed
 
 	a.EnvPool.RemoveEnv(envConf.Tag)
-	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-		log.Error().Err(err).Msg("error saving state")
-	}
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
@@ -227,8 +232,12 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 	}
 
 	env.M.Lock()
-	defer env.M.Unlock()
-
+	defer func() {
+		env.M.Unlock()
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+	}()
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
 	for _, e := range req.ExerciseConfigs {
@@ -264,9 +273,6 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 		})
 	}
 	wg.Wait()
-	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-		log.Error().Err(err).Msg("error saving state")
-	}
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 

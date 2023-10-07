@@ -30,6 +30,7 @@ type AgentClient interface {
 	CloseLab(ctx context.Context, in *CloseLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	AddExercisesToEnv(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	AddExercisesToLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	ResetLab(ctx context.Context, in *ResetLabRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	ResetExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	StartExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	StopExerciseInLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error)
@@ -114,6 +115,15 @@ func (c *agentClient) AddExercisesToEnv(ctx context.Context, in *ExerciseRequest
 func (c *agentClient) AddExercisesToLab(ctx context.Context, in *ExerciseRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	out := new(StatusResponse)
 	err := c.cc.Invoke(ctx, "/agent.Agent/AddExercisesToLab", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentClient) ResetLab(ctx context.Context, in *ResetLabRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/agent.Agent/ResetLab", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +236,7 @@ type AgentServer interface {
 	CloseLab(context.Context, *CloseLabRequest) (*StatusResponse, error)
 	AddExercisesToEnv(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	AddExercisesToLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
+	ResetLab(context.Context, *ResetLabRequest) (*StatusResponse, error)
 	ResetExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	StartExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
 	StopExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error)
@@ -264,6 +275,9 @@ func (UnimplementedAgentServer) AddExercisesToEnv(context.Context, *ExerciseRequ
 }
 func (UnimplementedAgentServer) AddExercisesToLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddExercisesToLab not implemented")
+}
+func (UnimplementedAgentServer) ResetLab(context.Context, *ResetLabRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetLab not implemented")
 }
 func (UnimplementedAgentServer) ResetExerciseInLab(context.Context, *ExerciseRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResetExerciseInLab not implemented")
@@ -442,6 +456,24 @@ func _Agent_AddExercisesToLab_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentServer).AddExercisesToLab(ctx, req.(*ExerciseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Agent_ResetLab_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetLabRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServer).ResetLab(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agent.Agent/ResetLab",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServer).ResetLab(ctx, req.(*ResetLabRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -636,6 +668,10 @@ var Agent_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AddExercisesToLab",
 			Handler:    _Agent_AddExercisesToLab_Handler,
+		},
+		{
+			MethodName: "ResetLab",
+			Handler:    _Agent_ResetLab_Handler,
 		},
 		{
 			MethodName: "ResetExerciseInLab",

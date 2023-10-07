@@ -12,6 +12,7 @@ service Agent {
     rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
     rpc AddExercisesToEnv (ExerciseRequest) returns (StatusResponse) {}
     rpc AddExercisesToLab(ExerciseRequest) returns (StatusResponse) {}
+    rpc ResetLab(ResetLabRequest) returns (StatusResponse) {}
     rpc ResetExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
@@ -27,6 +28,10 @@ message Empty{}
 message VmRequest {
     string labTag = 1;
     string connectionIdentifier = 2;
+}
+
+message ResetLabRequest {
+    string labTag = 1;
 }
 
 message GetLabRequest {

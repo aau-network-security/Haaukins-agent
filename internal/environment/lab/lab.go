@@ -195,7 +195,6 @@ func (l *Lab) Close() error {
 }
 
 func (l *Lab) RefreshDNS(ctx context.Context) error {
-
 	if l.DnsServer != nil {
 		if err := l.DnsServer.Close(); err != nil {
 			return err
@@ -220,6 +219,30 @@ func (l *Lab) RefreshDNS(ctx context.Context) error {
 	}
 
 	if _, err := l.Network.Connect(l.DnsServer.Container(), dns.PreferedIP); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (l *Lab) RefreshDHCP(ctx context.Context) error {
+	if l.DhcpServer != nil {
+		if err := l.DhcpServer.Close(); err != nil {
+			return err
+		}
+	}
+
+	serv, err := dhcp.New(l.Network.FormatIP)
+	if err != nil {
+		return err
+	}
+	l.DhcpServer = serv
+
+	if err := l.DhcpServer.Run(ctx); err != nil {
+		return err
+	}
+
+	if _, err := l.Network.Connect(l.DhcpServer.Container(), 2); err != nil {
 		return err
 	}
 
