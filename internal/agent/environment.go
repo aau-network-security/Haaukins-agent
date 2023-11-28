@@ -172,7 +172,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 
 	// Start the environment
-	go env.Start(context.TODO())
+	if err := env.Start(context.TODO()); err != nil {
+		log.Error().Err(err).Msg("error creating environment")
+		return &proto.StatusResponse{Message: "Error creating environment"}, err
+	}
 
 	a.EnvPool.AddEnv(env)
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
@@ -187,7 +190,7 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 			log.Error().Err(err).Msg("error saving state")
 		}
 	}()
-	
+
 	env, err := a.EnvPool.GetEnv(req.EventTag)
 	if err != nil {
 		log.Error().Str("envTag", req.EventTag).Msg("error finding finding environment with tag")
