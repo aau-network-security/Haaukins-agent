@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,9 +14,7 @@ import (
 	env "github.com/aau-network-security/haaukins-agent/internal/environment"
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/worker"
-	"github.com/aau-network-security/haaukins-agent/pkg/proto"
 	pb "github.com/aau-network-security/haaukins-agent/pkg/proto"
-	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
@@ -25,15 +22,13 @@ import (
 var configPath string
 
 type Agent struct {
-	initialized bool
-	config      *Config
-	State       *state.State
-	auth        Authenticator
-	vlib        *virtual.VboxLibrary
+	config *Config
+	State  *state.State
+	auth   Authenticator
+	vlib   *virtual.VboxLibrary
 	pb.UnimplementedAgentServer
 	workerPool worker.WorkerPool
 	newLabs    chan pb.Lab
-	ExClient   eproto.ExerciseStoreClient
 	EnvPool    *env.EnvPool `json:"envpool,omitempty"`
 }
 
@@ -119,20 +114,6 @@ func New(conf *Config) (*Agent, error) {
 		}
 	}
 
-	var initialized = true
-	var exClient eproto.ExerciseStoreClient
-	// Check if exercise service has been configured by daemon
-	if conf.ExerciseService.Grpc == "" {
-		log.Debug().Msg("exercise service not yet configured, waiting for daemon to initiliaze...")
-		initialized = false
-		exClient = nil
-	} else {
-		exClient, err = NewExerciseClientConn(conf.ExerciseService)
-		if err != nil {
-			return nil, fmt.Errorf("error connecting to exercise service: %s", err)
-		}
-	}
-
 	// Creating and starting a workerPool for lab creation
 	// This is to ensure that resources are not spent without having them
 	// Workeramount can be configured from the config
@@ -145,27 +126,29 @@ func New(conf *Config) (*Agent, error) {
 	if err != nil {
 		log.Error().Err(err).Msg("error resuming state")
 		envPool = &env.EnvPool{
-			M:    &sync.RWMutex{},
-			Envs: make(map[string]*env.Environment),
+			M:            &sync.RWMutex{},
+			Envs:         make(map[string]*env.Environment),
+			StartingEnvs: make(map[string]bool),
+			ClosingEnvs:  make(map[string]bool),
 		}
 	}
 	if envPool == nil {
 		envPool = &env.EnvPool{
-			M:    &sync.RWMutex{},
-			Envs: make(map[string]*env.Environment),
+			M:            &sync.RWMutex{},
+			Envs:         make(map[string]*env.Environment),
+			StartingEnvs: make(map[string]bool),
+			ClosingEnvs:  make(map[string]bool),
 		}
 	}
 	// Creating agent struct
 	a := &Agent{
-		initialized: initialized,
-		config:      conf,
-		workerPool:  workerPool,
-		vlib:        vlib,
-		auth:        NewAuthenticator(conf.SignKey, conf.AuthKey),
-		newLabs:     make(chan pb.Lab, 1000),
-		ExClient:    exClient,
-		EnvPool:     envPool,
-		State:       &state.State{},
+		config:     conf,
+		workerPool: workerPool,
+		vlib:       vlib,
+		auth:       NewAuthenticator(conf.SignKey, conf.AuthKey),
+		newLabs:    make(chan pb.Lab, 1000),
+		EnvPool:    envPool,
+		State:      &state.State{},
 	}
 	return a, nil
 }
@@ -191,52 +174,4 @@ func (d *Agent) NewGRPCServer(opts ...grpc.ServerOption) *grpc.Server {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	}, opts...)
 	return grpc.NewServer(opts...)
-}
-
-// Connect to exdb based on what creds sent by daemon, and write to config
-func (a *Agent) Init(ctx context.Context, req *proto.InitRequest) (*proto.StatusResponse, error) {
-	// Creating service config based on request from daemon
-	var exConf = ServiceConfig{
-		Grpc:       req.Url,
-		AuthKey:    req.AuthKey,
-		SignKey:    req.SignKey,
-		TLSEnabled: req.TlsEnabled,
-	}
-	// Creating new exercise service connection from config
-	log.Debug().Msgf("request: %v", req)
-	exClient, err := NewExerciseClientConn(exConf)
-	if err != nil {
-		log.Error().Err(err).Msg("error connecting to exercise service")
-		return nil, fmt.Errorf("error connecting to exercise service: %s", err)
-	}
-
-	// Saving the config in the agent config
-	a.config.ExerciseService = exConf
-
-	// Updating the config
-	data, err := yaml.Marshal(a.config)
-	if err != nil {
-		log.Error().Err(err).Msg("error marshalling yaml")
-		return nil, fmt.Errorf("error marshalling yaml: %s", err)
-	}
-
-	// Truncates existing file to overwrite with new data
-	f, err := os.Create(configPath)
-	if err != nil {
-		log.Error().Err(err).Msg("error creating or truncating config file")
-		return nil, fmt.Errorf("error creating or truncating config file: %s", err)
-	}
-
-	if err := f.Chmod(0600); err != nil {
-		log.Error().Err(err).Msg("error changing file perms")
-		return nil, fmt.Errorf("error changing file perms: %s", err)
-	}
-
-	if _, err := f.Write(data); err != nil {
-		log.Error().Err(err).Msg("error writing config to file")
-		return nil, fmt.Errorf("error writing config to file: %s", err)
-	}
-	a.initialized = true
-	a.ExClient = exClient
-	return &proto.StatusResponse{Message: "OK"}, nil
 }

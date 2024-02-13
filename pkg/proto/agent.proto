@@ -4,14 +4,15 @@ option go_package = "github.com/aau-network-security/haaukins-agent/proto";
 
 //TODO add CreateLabsForEnv function
 service Agent {
-    rpc Init(InitRequest) returns (StatusResponse) {}
     rpc CreateEnvironment(CreatEnvRequest) returns (StatusResponse) {}
     rpc CloseEnvironment(CloseEnvRequest) returns (StatusResponse) {}
+    rpc ListEnvironments(Empty) returns (ListEnvResponse) {}
     rpc CreateLabForEnv(CreateLabRequest) returns (StatusResponse) {}
     rpc CreateVpnConfForLab(CreateVpnConfRequest) returns (CreateVpnConfResponse) {}
     rpc CloseLab(CloseLabRequest) returns (StatusResponse) {}
     rpc AddExercisesToEnv (ExerciseRequest) returns (StatusResponse) {}
     rpc AddExercisesToLab(ExerciseRequest) returns (StatusResponse) {}
+    rpc ResetLab(ResetLabRequest) returns (StatusResponse) {}
     rpc ResetExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StartExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
     rpc StopExerciseInLab (ExerciseRequest) returns (StatusResponse) {}
@@ -27,6 +28,10 @@ message Empty{}
 message VmRequest {
     string labTag = 1;
     string connectionIdentifier = 2;
+}
+
+message ResetLabRequest {
+    string labTag = 1;
 }
 
 message GetLabRequest {
@@ -62,13 +67,6 @@ message Resources {
     uint64 memInstalled = 7;
 }
 
-message InitRequest {
-    string url = 1;
-    string authKey = 2;
-    string signKey = 3;
-    bool tlsEnabled = 4;
-}
-
 message PingRequest {
     string ping = 1;
 }
@@ -85,10 +83,17 @@ message CreatEnvRequest {
     int32 initialLabs = 4;
     repeated string exercises = 5;
     int32 teamSize = 6;
+    repeated ExerciseConfig exerciseConfigs = 7;
 }
 
 message CloseEnvRequest {
     string eventTag = 1;
+}
+
+message ListEnvResponse {
+    map<string, bool> eventTags = 1;
+    map<string, bool> startingEventTags = 2;
+    map<string, bool> closingEventTags = 3;
 }
 
 message CreateLabRequest{
@@ -113,6 +118,7 @@ message ExerciseRequest {
     string envTag = 2;
     repeated string exercises = 3;
     string exercise = 4;
+    repeated ExerciseConfig exerciseConfigs = 5;
 }
 
 message VmConfig {
@@ -156,4 +162,37 @@ message Machine {
 message GuacCreds {
     string username = 1;
     string password = 2;
+}
+
+message ExerciseConfig {
+    string tag = 1;
+    bool static = 2;
+    repeated ExerciseInstanceConfig instance = 3;
+}
+
+message ExerciseInstanceConfig {
+    string image = 1;
+    uint32 memory = 2;
+    float cpu = 3;
+    repeated EnvVarConfig envs = 4;
+    repeated ChildrenChalConfig children = 5;
+    repeated RecordConfig records = 6;
+}
+
+message EnvVarConfig {
+    string name = 1;
+    string value = 2;
+}
+
+message ChildrenChalConfig {
+    string tag = 1;
+    string name = 2;
+    string envFlag = 3;
+    string static = 4;
+}
+
+message RecordConfig {
+    string type = 1;
+    string name = 2;
+    string data = 3;
 }

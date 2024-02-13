@@ -16,7 +16,6 @@ import (
 	"github.com/aau-network-security/haaukins-agent/internal/environment/lab/virtual"
 	"github.com/aau-network-security/haaukins-agent/internal/state"
 	"github.com/aau-network-security/haaukins-agent/pkg/proto"
-	eproto "github.com/aau-network-security/haaukins-exercises/proto"
 	"github.com/rs/zerolog/log"
 )
 
@@ -30,9 +29,13 @@ var (
 // beginner events where the user would just need to press the connect button and a lab would be ready with all challenges running.
 func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvRequest) (*proto.StatusResponse, error) {
 	// Env for event already exists, Do not start a new guac container
-	if !a.initialized {
-		return nil, errors.New("agent not yet initialized")
-	}
+	a.EnvPool.AddStartingEnv(req.EventTag)
+	defer func() {
+		a.EnvPool.RemoveStartingEnv(req.EventTag)
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+	}()
 	log.Debug().Msgf("got createEnv request: %v", req)
 
 	if a.EnvPool.DoesEnvExist(req.EventTag) {
@@ -47,15 +50,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	envConf.WorkerPool = a.workerPool
 	envConf.TeamSize = int(req.TeamSize)
 	log.Debug().Str("envtype", envConf.Type.String()).Msg("making environment with type")
-	// Get exercise info from exercise db
 
-	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
-	if err != nil {
-		return nil, fmt.Errorf("error getting exercises: %s", err)
-	}
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
-	for _, e := range exerDbConfs.Exercises {
+	for _, e := range req.ExerciseConfigs {
 		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err
@@ -165,7 +163,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 				m.Lock()
 				env.Labs[lab.Tag] = &lab
 				m.Unlock()
-
+				// Should not be removed as it runs in a worker
 				if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
 					log.Error().Err(err).Msg("error saving state")
 				}
@@ -174,17 +172,25 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	}
 
 	// Start the environment
-	go env.Start(context.TODO())
+	if err := env.Start(context.TODO()); err != nil {
+		log.Error().Err(err).Msg("error creating environment")
+		return &proto.StatusResponse{Message: "Error creating environment"}, err
+	}
 
 	a.EnvPool.AddEnv(env)
-	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-		log.Error().Err(err).Msg("error saving state")
-	}
 	return &proto.StatusResponse{Message: "recieved createLabs request... starting labs"}, nil
 }
 
 // Closes environment and attached containers/vms, and removes the environment from the event pool
 func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest) (*proto.StatusResponse, error) {
+	a.EnvPool.AddClosingEnv(req.EventTag)
+	defer func() {
+		a.EnvPool.RemoveClosingEnv(req.EventTag)
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+	}()
+
 	env, err := a.EnvPool.GetEnv(req.EventTag)
 	if err != nil {
 		log.Error().Str("envTag", req.EventTag).Msg("error finding finding environment with tag")
@@ -210,9 +216,6 @@ func (a *Agent) CloseEnvironment(ctx context.Context, req *proto.CloseEnvRequest
 	env.EnvConfig.Status = environment.StatusClosed
 
 	a.EnvPool.RemoveEnv(envConf.Tag)
-	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-		log.Error().Err(err).Msg("error saving state")
-	}
 	return &proto.StatusResponse{Message: "OK"}, nil
 }
 
@@ -232,15 +235,15 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 	}
 
 	env.M.Lock()
-	defer env.M.Unlock()
-
-	exerDbConfs, err := a.ExClient.GetExerciseByTags(ctx, &eproto.GetExerciseByTagsRequest{Tag: req.Exercises})
-	if err != nil {
-		return nil, fmt.Errorf("error getting exercises: %s", err)
-	}
+	defer func() {
+		env.M.Unlock()
+		if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
+			log.Error().Err(err).Msg("error saving state")
+		}
+	}()
 	// Unpack into exercise slice
 	var exerConfs []exercise.ExerciseConfig
-	for _, e := range exerDbConfs.Exercises {
+	for _, e := range req.ExerciseConfigs {
 		ex, err := protobufToJson(e)
 		if err != nil {
 			return nil, err
@@ -273,10 +276,16 @@ func (a *Agent) AddExercisesToEnv(ctx context.Context, req *proto.ExerciseReques
 		})
 	}
 	wg.Wait()
-	if err := state.SaveState(a.EnvPool, a.config.StatePath); err != nil {
-		log.Error().Err(err).Msg("error saving state")
-	}
 	return &proto.StatusResponse{Message: "OK"}, nil
+}
+
+// Lists currently running, starting and closing environments.
+func (a *Agent) ListEnvironments(ctx context.Context, req *proto.Empty) (*proto.ListEnvResponse, error) {
+	return &proto.ListEnvResponse{
+		EventTags:         a.EnvPool.GetEnvList(),
+		StartingEventTags: a.EnvPool.GetStartingEnvs(),
+		ClosingEventTags:  a.EnvPool.GetClosingEnvs(),
+	}, nil
 }
 
 func getVPNIP() (string, error) {

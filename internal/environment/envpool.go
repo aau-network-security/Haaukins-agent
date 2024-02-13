@@ -80,3 +80,62 @@ func (ep *EnvPool) RemoveEnv(tag string) error {
 	delete(ep.Envs, tag)
 	return nil
 }
+
+func (ep *EnvPool) LockForFunc(function func()) {
+	ep.M.Lock()
+	defer ep.M.Unlock()
+
+	function()
+}
+
+func (ep *EnvPool) GetEnvList() (envList map[string]bool) {
+	ep.M.RLock()
+	defer ep.M.RUnlock()
+	envList = make(map[string]bool)
+	for eventTag := range ep.Envs {
+		envList[eventTag] = true
+	}
+	return
+}
+
+func (ep *EnvPool) GetStartingEnvs() map[string]bool {
+	ep.M.RLock()
+	defer ep.M.RUnlock()
+
+	return ep.StartingEnvs
+}
+
+func (ep *EnvPool) AddStartingEnv(eventTag string) {
+	ep.M.Lock()
+	defer ep.M.Unlock()
+
+	ep.StartingEnvs[eventTag] = true
+}
+
+func (ep *EnvPool) RemoveStartingEnv(eventTag string) {
+	ep.M.Lock()
+	defer ep.M.Unlock()
+
+	delete(ep.StartingEnvs, eventTag)
+}
+
+func (ep *EnvPool) GetClosingEnvs() map[string]bool {
+	ep.M.RLock()
+	defer ep.M.RUnlock()
+
+	return ep.ClosingEnvs
+}
+
+func (ep *EnvPool) AddClosingEnv(eventTag string) {
+	ep.M.Lock()
+	defer ep.M.Unlock()
+
+	ep.ClosingEnvs[eventTag] = true
+}
+
+func (ep *EnvPool) RemoveClosingEnv(eventTag string) {
+	ep.M.Lock()
+	defer ep.M.Unlock()
+
+	delete(ep.ClosingEnvs, eventTag)
+}

@@ -611,7 +611,6 @@ func (guac *Guacamole) authAction(action string, a func(string) (*http.Response,
 		return err
 	}
 
-	log.Debug().Msgf("i in action: %v", i)
 	if i != nil {
 		if err := json.Unmarshal(content, i); err != nil {
 			return err
