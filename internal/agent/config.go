@@ -17,8 +17,6 @@ type Config struct {
 	StatePath          string                           `yaml:"state-path"`
 	VPNService         VPNconf                          `yaml:"vpn-service"`
 	DockerRepositories []dockerclient.AuthConfiguration `yaml:"docker-repositories"`
-	GuacSSL            bool                             `yaml:"guac-ssl"`
-	JwtSecret          string                           `yaml:"jwtSecret"`
 }
 
 type VPNconf struct {

@@ -17,12 +17,19 @@ const (
 	defaultConfigFile = "config/config.yml"
 )
 
+var (
+	version     = "dev"
+	compileDate = "unknown"
+)
+
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	confFilePtr := flag.String("config", defaultConfigFile, "configuration file")
 	flag.Parse()
+
+	log.Info().Str("version", version).Str("compileDate", compileDate).Msg("Starting HAAUKINS Agent...")
 
 	c, err := agent.NewConfigFromFile(*confFilePtr)
 	if err != nil {

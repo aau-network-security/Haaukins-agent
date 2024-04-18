@@ -1,0 +1,21 @@
+[Unit]
+Description=Haaukins (agent)
+ConditionPathExists=/home/haaukins
+After=network.target
+
+[Service]
+Type=simple
+User=haaukins
+Group=haaukins
+LimitNOFILE=9223372036854775807
+
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=600
+
+WorkingDirectory=/home/haaukins/haaukins-agent
+ExecStart=/home/haaukins/haaukins-agent/haaukins-agent
+
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=haaukins-agent
