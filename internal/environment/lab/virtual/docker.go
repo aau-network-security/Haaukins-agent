@@ -274,9 +274,10 @@ func (c *Container) getCreateConfig() (*docker.CreateContainerOptions, error) {
 		}
 
 		hostConf.Mounts = append(hostConf.Mounts, docker.HostMount{
-			Target: "/etc/resolv.conf",
-			Source: resolvPath,
-			Type:   "bind",
+			Target:   "/etc/resolv.conf",
+			Source:   resolvPath,
+			Type:     "bind",
+			ReadOnly: true,
 		})
 	}
 

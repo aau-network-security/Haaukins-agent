@@ -4,11 +4,9 @@ grpcPort: 8081
 proxyPort: 8082
 
 
-auth-key: test-auth-key
-sign-key: test-sign-key
+auth-key: agent-auth-key
+sign-key: agent-sign-key
 max-workers: 5
-guac-ssl: false
-jwtSecret: test
 file-transfer-root: /path/to/desired/filetransfer/root
 ova-dir: /path/to/desired/ova/directory
 state-path: /path/to/desired/state/directory
@@ -16,8 +14,8 @@ state-path: /path/to/desired/state/directory
 vpn-service:
   endpoint: vpn.localhost
   port: 5353
-  auth-key: dev-auth-key
-  sign-key: dev-sign-key
+  auth-key: vpn-service-auth-key
+  sign-key: vpn-service-sign-key
   wg-conf-dir: /etc/wireguard
   tls-enabled: false
 

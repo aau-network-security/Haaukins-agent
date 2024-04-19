@@ -216,10 +216,6 @@ func (e ExerciseConfig) CreateContainerOpts() []ContainerOptions {
 				if flag.EnvVar != "" {
 					envVars[flag.EnvVar] = value
 				}
-			} else {
-				if flag.EnvVar != "" {
-					envVars[flag.EnvVar] = value
-				}
 			}
 
 			childExercises = append(childExercises, ChildExercise{
