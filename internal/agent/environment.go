@@ -101,6 +101,7 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	env, err := envConf.NewEnv(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("error creating environment")
+		vpnIPPool.ReleaseIP(vpnIP)
 		return &proto.StatusResponse{Message: "Error creating environment"}, err
 	}
 
@@ -174,6 +175,10 @@ func (a *Agent) CreateEnvironment(ctx context.Context, req *proto.CreatEnvReques
 	// Start the environment
 	if err := env.Start(context.TODO()); err != nil {
 		log.Error().Err(err).Msg("error creating environment")
+		vpnIPPool.ReleaseIP(vpnIP)
+		if err := env.Close(); err != nil {
+			log.Error().Err(err).Msg("error closing environment after error creating it")
+		}
 		return &proto.StatusResponse{Message: "Error creating environment"}, err
 	}
 
