@@ -37,6 +37,7 @@ func (ec *EnvConfig) NewEnv(ctx context.Context) (*Environment, error) {
 	wgClient, err := wg.NewGRPCVPNClient(ec.VpnConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("error connecting to wg server")
+		guac.Close()
 		return nil, err
 	}
 
