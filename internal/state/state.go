@@ -21,12 +21,15 @@ import (
 // Saves the current state of the environment pool to a state.json file.
 // Should be called whenever any changes to the environment pool is made
 func SaveState(envPool *environment.EnvPool, statePath string) error {
-
+	envPool.M.RLock()
+	defer envPool.M.RUnlock()
 	state := State{
 		Environments: make(map[string]Environment),
 	}
 	for k, env := range envPool.Envs {
+		env.M.RLock()
 		envState := makeEnvState(env)
+		env.M.RUnlock()
 		state.Environments[k] = envState
 	}
 
@@ -256,7 +259,9 @@ func makeEnvState(env *environment.Environment) Environment {
 		Debug: env.IpT.Debug,
 	}
 	for k, l := range env.Labs {
+		l.M.RLock()
 		labState := makeLabState(l)
+		l.M.RUnlock()
 		envState.Labs[k] = labState
 	}
 	return envState
