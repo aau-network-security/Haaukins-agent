@@ -61,7 +61,7 @@ docker-repositories:
   password: some-password-for-said-registry
 - serveraddress: ghcr.io # This registry has to be included, it is needed to get db docker image for the Apache Guacamole containers. A username and password can be added if used for challenge docker registry.
 ```
-
+Remember the config should be placed at `/$HOME/haaukins-agent/config/config.yml`
 
 ### Ports
 Wireguard uses UDP for it's connections.  
